@@ -5,6 +5,7 @@ import {
     DataType
 } from "sequelize-typescript"
 import { ShotAssignedAttributes } from "../types/types"
+import { ShotStatus } from "../../globals/types"
 
 interface ShotAssignedCreationAttributes
     extends Omit<ShotAssignedAttributes, "id"> {
@@ -46,17 +47,16 @@ class ShotAssigned
     })
     declare employeeId: string
 
+    @Column({
+        type: DataType.ENUM(ShotStatus.created, ShotStatus.assigned, ShotStatus.submitted, ShotStatus.completed)
+    })
+    declare status: string
 
     @Column({
         type: DataType.UUID
     })
     declare assignedBy: string
 
-
-    @Column({
-        type: DataType.DATE
-    })
-    declare assignedAt: Date
 }
 
 

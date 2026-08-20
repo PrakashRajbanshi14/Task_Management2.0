@@ -2,15 +2,14 @@ import express from "express";
 import cors from "cors";
 import userRoutes from "./routes/userRoute";
 import projectRoutes from "./routes/projectRoutes"
-// import shotRoutes from "./routes/shotRoutes"
+import shotRoutes from "./routes/shotRoutes"
 import projectAssignedRoutes from "./routes/projectAssignedRoutes"
-// import shotAssignedRoutes from "./routes/shotAssignedRoutes"
+import shotAssignedRoutes from "./routes/shotAssignedRoutes"
 // import shotSubmissionRoutes from "./routes/shotSubmissionRoutes"
 // import shotReviewRoutes from "./routes/shotReviewRoutes"
 // import conversationRoutes from "./routes/conversationRoutes"
 import cookieParser from "cookie-parser"
 const app = express();
-
 
 const allowedOrigins = [
   process.env.FRONTEND_URL,
@@ -37,8 +36,8 @@ app.get("/", (req, res) => {
 app.use("/api/auth",userRoutes)
 app.use("/api/projects",projectRoutes)
 app.use("/api/projects",projectAssignedRoutes)
-// app.use("/api/shots",shotRoutes)
-// app.use("/api/shots",shotAssignedRoutes)
+app.use("/api/shots",shotRoutes)
+app.use("/api/shot-assigned",shotAssignedRoutes)
 // app.use("/api/shots",shotSubmissionRoutes)
 // app.use("/api/shots",shotReviewRoutes)
 // app.use("/api/conversations",conversationRoutes)

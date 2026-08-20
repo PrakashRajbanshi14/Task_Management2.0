@@ -15,7 +15,6 @@ declare global {
     }
   }
 }
-
 export interface IExtendedRequest extends Request {}
 
 export enum UserRole {
@@ -44,7 +43,6 @@ export enum ProjectPriority {
 export enum ShotStatus {
     created = "created",
     assigned = "assigned",
-    inProgress = "in_progress",
     submitted = "submitted",
     completed = "completed"
 }

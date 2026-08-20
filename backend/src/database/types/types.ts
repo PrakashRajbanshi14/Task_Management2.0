@@ -62,7 +62,6 @@ export interface ShotAssignedAttributes {
     shotId: string
     employeeId: string
     assignedBy: string
-    assignedAt: Date
 }
 
 export interface ShotSubmissionAttributes {

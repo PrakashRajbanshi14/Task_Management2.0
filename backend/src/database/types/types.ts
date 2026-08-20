@@ -1,4 +1,4 @@
-import { ProjectPriority, ProjectStatus, ReviewStatus, ShotStatus, SubmissionStatus, UserRole } from "../../globals/types"
+import { ProjectPriority, ProjectStatus, ReviewStatus, ShotStatus, SubmissionFileType, SubmissionStatus, UserRole } from "../../globals/types"
 
 export interface UserAttributes {
     id: string
@@ -69,13 +69,13 @@ export interface ShotSubmissionAttributes {
     shotId: string
     submittedBy: string
     version: number
+    mimeType: string
     driveFileId: string
     driveFileUrl: string | null
     fileName: string
     fileSize: number | null
-    mimeType: string | null
+    fileType : SubmissionFileType
     status: SubmissionStatus
-    submittedAt: Date
 }
 
 export interface ShotReviewAttributes {

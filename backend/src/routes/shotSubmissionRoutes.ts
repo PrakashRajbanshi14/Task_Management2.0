@@ -1,101 +1,159 @@
-import express from "express"
+import express from "express";
 
-import authMiddleware
-    from "../middlewares/authMiddleware"
+import {
+  accessToRoles,
+  isUserLoggedIn,
+} from "../middlewares/UserMiddleware";
 
-import accessTo
-    from "../middlewares/roleMiddleware"
+import upload from "../middlewares/multerMiddleware";
 
-import { UserRole } from "../globals/types"
-import shotSubmissionController from "../controllers/shotSubmissionController"
+import { UserRole } from "../globals/types";
+
+import ShotSubmissionControllers
+  from "../controller/shotSubmisionControllers";
 
 
-const router = express.Router()
+const router = express.Router();
 
 
 // ==========================================
-// CREATE SHOT SUBMISSION
+// Submit Shot
 // ==========================================
 
 router.post(
 
-    "/:shotId/submissions",
+  "/:shotId/submit",
 
-    authMiddleware,
+  isUserLoggedIn,
 
-    (req, res) => shotSubmissionController.createSubmission(req as any, res)
+  accessToRoles(
+    UserRole.Employee
+  ),
 
-)
+  upload.fields([
+
+    {
+      name: "video",
+      maxCount: 1,
+    },
+
+    {
+      name: "projectFiles",
+      maxCount: 10,
+    },
+
+  ]),
+
+  ShotSubmissionControllers.submitShot,
+
+);
 
 
 // ==========================================
-// GET ALL SUBMISSIONS OF SHOT
+// Get All Submissions Of A Shot
 // ==========================================
 
 router.get(
 
-    "/:shotId/submissions",
+  "/shot/:shotId",
 
-    authMiddleware,
+  isUserLoggedIn,
 
-    shotSubmissionController.getShotSubmissions
+  accessToRoles(
+    UserRole.Employee,
+    UserRole.ProjectManager,
+    UserRole.Admin
+  ),
 
-)
+  ShotSubmissionControllers
+    .getAllSubmissionsOfShot,
+
+);
 
 
 // ==========================================
-// GET SUBMISSION BY ID
+// Get Submission By ID
 // ==========================================
 
 router.get(
 
-    "/submissions/:submissionId",
+  "/:submissionId",
 
-    authMiddleware,
+  isUserLoggedIn,
 
-    shotSubmissionController.getSubmissionById
+  accessToRoles(
+    UserRole.Employee,
+    UserRole.ProjectManager,
+    UserRole.Admin
+  ),
 
-)
+  ShotSubmissionControllers
+    .getSubmissionById,
+
+);
 
 
 // ==========================================
-// UPDATE SUBMISSION STATUS
+// Approve Submission
 // ==========================================
 
 router.patch(
 
-    "/submissions/:submissionId/status",
+  "/:submissionId/approve",
 
-    authMiddleware,
+  isUserLoggedIn,
 
-    accessTo(
-        UserRole.ProjectManager,
-        UserRole.Admin
-    ),
+  accessToRoles(
+    UserRole.ProjectManager,
+    UserRole.Admin
+  ),
 
-    shotSubmissionController.updateSubmissionStatus
+  ShotSubmissionControllers
+    .approveSubmission,
 
-)
+);
 
 
 // ==========================================
-// DELETE SUBMISSION
+// Update Submission Status
 // ==========================================
 
-router.delete(
+router.patch(
 
-    "/submissions/:submissionId",
+  "/:submissionId/status",
 
-    authMiddleware,
+  isUserLoggedIn,
 
-    accessTo(
-        UserRole.ProjectManager,
-        UserRole.Admin
-    ),
+  accessToRoles(
+    UserRole.ProjectManager,
+    UserRole.Admin
+  ),
 
-    shotSubmissionController.deleteSubmission
+  ShotSubmissionControllers
+    .updateSubmissionStatus,
 
-)
+);
 
 
-export default router
+// ==========================================
+// Delete Submission
+// ==========================================
+
+// router.delete(
+
+//   "/:submissionId",
+
+//   isUserLoggedIn,
+
+//   accessToRoles(
+//     UserRole.ProjectManager,
+//     UserRole.Admin
+//   ),
+
+//   ShotSubmissionControllers
+//     .,
+
+// );
+
+
+export default router;

@@ -1,6 +1,6 @@
 import { Table, Column, Model, DataType } from "sequelize-typescript";
 import { ShotSubmissionAttributes } from "../types/types";
-import { SubmissionStatus } from "../../globals/types";
+import { SubmissionFileType, SubmissionStatus } from "../../globals/types";
 
 interface ShotSubmissionCreationAttributes extends Omit<
   ShotSubmissionAttributes,
@@ -64,6 +64,16 @@ class ShotSubmission extends Model<
   declare fileSize: number | null;
 
   @Column({
+  type: DataType.ENUM(
+    SubmissionFileType.video,
+    SubmissionFileType.projectFiles
+  ),
+  allowNull: false,
+})
+declare fileType: SubmissionFileType;
+
+
+  @Column({
     type: DataType.STRING,
     allowNull: true,
   })
@@ -78,10 +88,6 @@ class ShotSubmission extends Model<
   })
   declare status: SubmissionStatus;
 
-  @Column({
-    type: DataType.DATE,
-  })
-  declare submittedAt: Date;
 }
 
 export default ShotSubmission;

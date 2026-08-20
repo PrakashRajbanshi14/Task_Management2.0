@@ -41,10 +41,11 @@ export enum ProjectPriority {
 }
 
 export enum ShotStatus {
-    created = "created",
-    assigned = "assigned",
-    submitted = "submitted",
-    completed = "completed"
+    created = "Created",
+    assigned = "Assigned",
+    submitted = "Submitted",
+    approved = "Approved",
+    completed = "Completed"
 }
 
 export enum SubmissionStatus {
@@ -52,6 +53,11 @@ export enum SubmissionStatus {
     underReview = "under_review",
     approved = "approved",
     redoRequired = "redo_required"
+}
+
+export enum SubmissionFileType {
+  video = "video",
+  projectFiles = "projectFiles",
 }
 
 export enum ReviewStatus {

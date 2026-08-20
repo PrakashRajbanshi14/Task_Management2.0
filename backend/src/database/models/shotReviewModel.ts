@@ -35,6 +35,10 @@ class ShotReview
     })
     declare id: string
 
+    @Column({
+        type: DataType.UUID
+    })
+    declare shotID: string
 
     @Column({
         type: DataType.UUID

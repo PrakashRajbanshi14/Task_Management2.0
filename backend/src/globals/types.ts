@@ -45,6 +45,7 @@ export enum ShotStatus {
     assigned = "Assigned",
     submitted = "Submitted",
     approved = "Approved",
+    redo = "Redo",
     completed = "Completed"
 }
 

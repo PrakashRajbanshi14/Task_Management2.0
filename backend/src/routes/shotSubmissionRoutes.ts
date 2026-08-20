@@ -65,39 +65,11 @@ router.get(
 );
 
 // ==========================================
-// Approve Submission
-// ==========================================
-
-router.patch(
-  "/:submissionId/approve",
-
-  isUserLoggedIn,
-
-  accessToRoles(UserRole.ProjectManager, UserRole.Admin),
-
-  ShotSubmissionControllers.approveSubmission,
-);
-
-// ==========================================
-// Update Submission Status
-// ==========================================
-
-router.patch(
-  "/:submissionId/status",
-
-  isUserLoggedIn,
-
-  accessToRoles(UserRole.ProjectManager, UserRole.Admin),
-
-  ShotSubmissionControllers.updateSubmissionStatus,
-);
-
-// ==========================================
 // Delete Submission
 // ==========================================
 
-router.delete(
-  "/:submissionId",
+router.patch(
+  "/:submissionId/",
 
   isUserLoggedIn,
 
@@ -105,5 +77,7 @@ router.delete(
 
   ShotSubmissionControllers.deleteSubmissionById,
 );
+
+
 
 export default router;

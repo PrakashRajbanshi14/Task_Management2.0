@@ -80,10 +80,11 @@ export interface ShotSubmissionAttributes {
 
 export interface ShotReviewAttributes {
     id: string
+    shotId: string
     submissionId: string
     reviewedBy: string
     status: ReviewStatus
-    comment: string | null
+    feedback: string | null
 }
 
 export interface ConversationAttributes {

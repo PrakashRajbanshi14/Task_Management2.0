@@ -12,6 +12,7 @@ import ShotReview from "./models/shotReviewModel";
 import Conversation from "./models/conversationModel";
 import Message from "./models/messageModel";
 import Employee from "./models/employeeModel";
+import Notification from "./models/notificationModel";
 if (!envConfig.connectionString) {
   throw new Error("Missing DB_URI or DATABASE_URL environment variable");
 }
@@ -26,6 +27,7 @@ const sequelize = new Sequelize(envConfig.connectionString, {
     ShotAssigned,
     ShotSubmission,
     ShotReview,
+    Notification,
     Conversation,
     Message,
   ],
@@ -292,6 +294,34 @@ Message.belongsTo(User, {
 User.hasMany(Message, {
   foreignKey: "senderId",
   as: "messages",
+});
+// ==========================================
+// Notification receiver
+// ==========================================
+
+Notification.belongsTo(User, {
+  foreignKey: "receiverId",
+  as: "receiver",
+});
+
+User.hasMany(Notification, {
+  foreignKey: "receiverId",
+  as: "receivedNotifications",
+});
+
+
+// ==========================================
+// Notification sender
+// ==========================================
+
+Notification.belongsTo(User, {
+  foreignKey: "senderId",
+  as: "sender",
+});
+
+User.hasMany(Notification, {
+  foreignKey: "senderId",
+  as: "sentNotifications",
 });
 
 // =====================================================

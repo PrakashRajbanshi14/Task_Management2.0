@@ -1,37 +1,100 @@
 import http from "http";
-import app from "./src/app";
-import sequelize from "./src/database/connection";
-// import { initializeSocket } from "./src/sockets/chatSocket";
 
-const PORT = process.env.PORT || 3000;
+import app from "./src/app";
+
+import sequelize from "./src/database/connection";
+
+import {
+  initializeSocket,
+} from "./src/sockets/notificationSocket";
+
+
+const PORT =
+  process.env.PORT || 3000;
+
 
 const startServer = async () => {
+
   try {
+
+    // ==========================================
+    // Database Connection
+    // ==========================================
+
     await sequelize.authenticate();
 
-    console.log("Database Connected Successfully!");
+    console.log(
+      "Database Connected Successfully!"
+    );
+
+
+    // ==========================================
+    // Database Sync
+    // ==========================================
 
     await sequelize.sync({
+
       force: false,
+
       alter: false,
+
     });
 
-    console.log("Database Synced Successfully!");
+    console.log(
+      "Database Synced Successfully!"
+    );
 
-    // Create HTTP server
-    // const server = http.createServer(app);
 
-    // Initialize Socket.io
-    // initializeSocket(server);
+    // ==========================================
+    // Create HTTP Server
+    // ==========================================
 
-    app.listen(PORT, () => {
-      console.log(`Server is running on http://localhost:${PORT}`);
-    });
+    const server =
+      http.createServer(app);
+
+
+    // ==========================================
+    // Initialize Socket.IO
+    // ==========================================
+
+    initializeSocket(server);
+
+
+    // ==========================================
+    // Start Server
+    // ==========================================
+
+    server.listen(
+
+      PORT,
+
+      () => {
+
+        console.log(
+          `Server is running on http://localhost:${PORT}`
+        );
+
+        console.log(
+          "Socket.IO is running successfully!"
+        );
+
+      }
+
+    );
+
+
   } catch (error) {
-    console.error("Unable to start server:", error);
+
+    console.error(
+      "Unable to start server:",
+      error
+    );
 
     process.exit(1);
+
   }
+
 };
+
 
 startServer();

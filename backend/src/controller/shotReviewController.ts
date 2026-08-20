@@ -6,6 +6,7 @@ import {
   SubmissionStatus,
   SubmissionFileType,
   ShotStatus,
+  NotificationType,
 } from "../globals/types";
 
 import { sendResponse } from "../utils/sendResponse";
@@ -19,6 +20,7 @@ import ProjectShot from "../database/models/projectShotModel";
 import Project from "../database/models/projectModel";
 
 import googleDriveService from "../services/googleDriveService";
+import NotificationService from "../services/notificationService";
 
 class ShotReviewControllers {
   // ==========================================
@@ -213,6 +215,14 @@ class ShotReviewControllers {
         feedback: null,
       });
 
+      await NotificationService.createNotification({
+        senderId: reviewerId,
+        receiverId: submission.submittedBy,
+        title: "Shot Approved",
+        message: `Your shot submission v${submission.version} has been approved.`,
+        type: NotificationType.submissionApproved,
+        url: `/employee/shots/${submission.shotId}`,
+      });
       // --------------------------------------
       // Delete version folder
       // --------------------------------------
@@ -328,6 +338,15 @@ class ShotReviewControllers {
         reviewedBy: reviewerId,
         status: ReviewStatus.redoRequired,
         feedback,
+      });
+
+      await NotificationService.createNotification({
+        senderId: reviewerId,
+        receiverId: submission.submittedBy,
+        title: "Shot Needs Revision",
+        message: `Your shot submission v${submission.version} needs revision.`,
+        type: NotificationType.submissionRedo,
+        url: `/employee/shots/${submission.shotId}`,
       });
 
       return sendResponse(res, 200, "Redo requested successfully", review);

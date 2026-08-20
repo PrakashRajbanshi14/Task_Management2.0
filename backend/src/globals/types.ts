@@ -65,3 +65,12 @@ export enum ReviewStatus {
     approved = "approved",
     redoRequired = "redo_required"
 }
+
+export enum NotificationType {
+  shotAssigned = "shot_assigned",
+  shotSubmitted = "shot_submitted",
+  submissionApproved = "submission_approved",
+  submissionRedo = "submission_redo",
+  projectAssigned = "project_assigned",
+  message = "message",
+}

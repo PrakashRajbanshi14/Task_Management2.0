@@ -6,552 +6,299 @@ import {
   SubmissionStatus,
   SubmissionFileType,
   ShotStatus,
+  NotificationType,
 } from "../globals/types";
 
 import { sendResponse } from "../utils/sendResponse";
 
-import ProjectShot
-  from "../database/models/projectShotModel";
+import ProjectShot from "../database/models/projectShotModel";
 
-import ShotAssigned
-  from "../database/models/shotAssignedModel";
+import ShotAssigned from "../database/models/shotAssignedModel";
 
-import ShotSubmission
-  from "../database/models/shotSubmissionModel";
+import ShotSubmission from "../database/models/shotSubmissionModel";
 
-import Project
-  from "../database/models/projectModel";
+import Project from "../database/models/projectModel";
 
-import googleDriveService
-  from "../services/googleDriveService";
-
+import googleDriveService from "../services/googleDriveService";
+import NotificationService from "../services/notificationService";
 
 class ShotSubmissionControllers {
-
-  static async submitShot(
-    req: IExtendedRequest,
-    res: Response
-  ) {
-
+  static async submitShot(req: IExtendedRequest, res: Response) {
     try {
-
-      const submittedBy =
-        req.user?.id;
-
+      const submittedBy = req.user?.id;
 
       if (!submittedBy) {
-        return sendResponse(
-          res,
-          401,
-          "Please login!"
-        );
+        return sendResponse(res, 401, "Please login!");
       }
 
-
-      const shotId =
-        req.params.shotId as string;
-
+      const shotId = req.params.shotId as string;
 
       if (!shotId) {
-        return sendResponse(
-          res,
-          400,
-          "Shot ID is required!"
-        );
+        return sendResponse(res, 400, "Shot ID is required!");
       }
 
+      const files = req.files as {
+        [fieldname: string]: Express.Multer.File[];
+      };
 
-      const files =
-        req.files as {
-          [fieldname: string]:
-            Express.Multer.File[];
-        };
+      const video = files?.video?.[0];
 
+      const projectFiles = files?.projectFiles || [];
 
-      const video =
-        files?.video?.[0];
-
-
-      const projectFiles =
-        files?.projectFiles || [];
-
-
-      if (
-        !video &&
-        projectFiles.length === 0
-      ) {
-
-        return sendResponse(
-          res,
-          400,
-          "Please upload a video or project file!"
-        );
-
+      if (!video && projectFiles.length === 0) {
+        return sendResponse(res, 400, "Please upload a video or project file!");
       }
 
-
-      const shot =
-        await ProjectShot.findByPk(
-          shotId
-        );
-
+      const shot = await ProjectShot.findByPk(shotId);
 
       if (!shot) {
-        return sendResponse(
-          res,
-          404,
-          "Shot not found!"
-        );
+        return sendResponse(res, 404, "Shot not found!");
       }
 
-
-      const assignment =
-        await ShotAssigned.findOne({
-
-          where: {
-            shotId,
-            employeeId: submittedBy,
-          },
-
-        });
-
+      const assignment = await ShotAssigned.findOne({
+        where: {
+          shotId,
+          employeeId: submittedBy,
+        },
+      });
 
       if (!assignment) {
-        return sendResponse(
-          res,
-          403,
-          "This shot is not assigned to you!"
-        );
+        return sendResponse(res, 403, "This shot is not assigned to you!");
       }
 
-
-      const project =
-        await Project.findByPk(
-          shot.projectId
-        );
-
+      const project = await Project.findByPk(shot.projectId);
 
       if (!project) {
-        return sendResponse(
-          res,
-          404,
-          "Project not found!"
-        );
+        return sendResponse(res, 404, "Project not found!");
       }
-
 
       // Get previous version
 
-      const previousSubmission =
-        await ShotSubmission.findOne({
+      const previousSubmission = await ShotSubmission.findOne({
+        where: {
+          shotId,
+        },
 
-          where: {
-            shotId,
-          },
+        order: [["version", "DESC"]],
+      });
 
-          order: [
-            ["version", "DESC"],
-          ],
-
-        });
-
-
-      const version =
-        previousSubmission
-          ? previousSubmission.version + 1
-          : 1;
-
+      const version = previousSubmission ? previousSubmission.version + 1 : 1;
 
       // Get folders
 
-      const folders =
-        await googleDriveService
-          .getShotUnderReviewFolder(
-            project.name,
-            shot.shotNumber,
-            version
-          );
+      const folders = await googleDriveService.getShotUnderReviewFolder(
+        project.name,
+        shot.shotNumber,
+        version,
+      );
 
-
-      const versionFolderId =
-        folders.versionFolderId;
-
+      const versionFolderId = folders.versionFolderId;
 
       const filesToUpload: {
         file: Express.Multer.File;
         fileType: SubmissionFileType;
       }[] = [];
 
-
       if (video) {
-
         filesToUpload.push({
-
           file: video,
 
-          fileType:
-            SubmissionFileType.video,
-
+          fileType: SubmissionFileType.video,
         });
-
       }
 
-
-      for (
-        const projectFile
-        of projectFiles
-      ) {
-
+      for (const projectFile of projectFiles) {
         filesToUpload.push({
-
           file: projectFile,
 
-          fileType:
-            SubmissionFileType.projectFiles,
-
+          fileType: SubmissionFileType.projectFiles,
         });
-
       }
-
 
       const submissions = [];
 
-
-      for (
-        const item
-        of filesToUpload
-      ) {
-
-        const file =
-          item.file;
-
+      for (const item of filesToUpload) {
+        const file = item.file;
 
         // Temporary version prefix
 
-        const driveFileName =
-          `v${version}_${file.originalname}`;
+        const driveFileName = `v${version}_${file.originalname}`;
 
+        const uploadedFile = await googleDriveService.uploadFileToDrive(
+          file.path,
 
-        const uploadedFile =
-          await googleDriveService
-            .uploadFileToDrive(
+          driveFileName,
 
-              file.path,
+          file.mimetype,
 
-              driveFileName,
-
-              file.mimetype,
-
-              versionFolderId
-
-            );
-
-
-        if (!uploadedFile.id) {
-          throw new Error(
-            "Google Drive upload failed"
-          );
-        }
-
-
-        const submission =
-          await ShotSubmission.create({
-
-            shotId,
-
-            submittedBy,
-
-            version,
-
-            driveFileId:
-              uploadedFile.id,
-
-            driveFileUrl:
-              uploadedFile.webViewLink
-                ?? null,
-
-            // Store original name
-            // without version prefix
-
-            fileName:
-              file.originalname,
-
-            fileSize:
-              file.size,
-
-            mimeType:
-              file.mimetype,
-
-            fileType:
-              item.fileType,
-
-            status:
-              SubmissionStatus.submitted,
-
-          });
-
-
-        submissions.push(
-          submission
+          versionFolderId,
         );
 
-
-        if (
-          fs.existsSync(file.path)
-        ) {
-
-          fs.unlinkSync(file.path);
-
+        if (!uploadedFile.id) {
+          throw new Error("Google Drive upload failed");
         }
 
+        const submission = await ShotSubmission.create({
+          shotId,
+
+          submittedBy,
+
+          version,
+
+          driveFileId: uploadedFile.id,
+
+          driveFileUrl: uploadedFile.webViewLink ?? null,
+
+          // Store original name
+          // without version prefix
+
+          fileName: file.originalname,
+
+          fileSize: file.size,
+
+          mimeType: file.mimetype,
+
+          fileType: item.fileType,
+
+          status: SubmissionStatus.submitted,
+        });
+
+        submissions.push(submission);
+
+        if (fs.existsSync(file.path)) {
+          fs.unlinkSync(file.path);
+        }
       }
 
-
       await ProjectShot.update(
-
         {
-          status:
-            ShotStatus.submitted,
+          status: ShotStatus.submitted,
         },
 
         {
           where: {
             id: shotId,
           },
-        }
-
+        },
       );
 
+      await NotificationService.createNotification({
+        senderId: submittedBy,
+        receiverId: project.projectManagerId as string,
+        title: "New Shot Submission",
+        message: `Shot ${shot.shotNumber} has been submitted for review.`,
+        type: NotificationType.shotSubmitted,
+        url: `/project-manager/shots/${shotId}/review`,
+      });
 
       return sendResponse(
-
         res,
-
         201,
-
         "Shot submitted successfully",
-
         {
           version,
           submissions,
-        }
-
+        },
       );
-
-
     } catch (error) {
+      console.error("Shot Submission Error:", error);
 
-      console.error(
-        "Shot Submission Error:",
-        error
-      );
-
-
-      return sendResponse(
-        res,
-        500,
-        "Failed to submit shot"
-      );
-
+      return sendResponse(res, 500, "Failed to submit shot");
     }
-
   }
-
 
   // ==========================================
   // GET ALL SUBMISSIONS OF SHOT
   // ==========================================
 
-  static async getAllSubmissionsOfShot(
-    req: IExtendedRequest,
-    res: Response
-  ) {
-
+  static async getAllSubmissionsOfShot(req: IExtendedRequest, res: Response) {
     try {
-
-      const { shotId } =
-        req.params;
-
+      const { shotId } = req.params;
 
       if (!shotId) {
-        return sendResponse(
-          res,
-          400,
-          "Shot ID is required!"
-        );
+        return sendResponse(res, 400, "Shot ID is required!");
       }
 
+      const submissions = await ShotSubmission.findAll({
+        where: {
+          shotId,
+        },
 
-      const submissions =
-        await ShotSubmission.findAll({
-
-          where: {
-            shotId,
-          },
-
-          order: [
-            ["version", "DESC"],
-            ["createdAt", "DESC"],
-          ],
-
-        });
-
+        order: [
+          ["version", "DESC"],
+          ["createdAt", "DESC"],
+        ],
+      });
 
       return sendResponse(
         res,
         200,
         "Submissions fetched successfully",
-        submissions
+        submissions,
       );
-
-
     } catch (error) {
-
       console.error(error);
 
-      return sendResponse(
-        res,
-        500,
-        "Failed to fetch submissions"
-      );
-
+      return sendResponse(res, 500, "Failed to fetch submissions");
     }
-
   }
-
 
   // ==========================================
   // GET SUBMISSION BY ID
   // ==========================================
 
-  static async getSubmissionById(
-    req: IExtendedRequest,
-    res: Response
-  ) {
-
+  static async getSubmissionById(req: IExtendedRequest, res: Response) {
     try {
+      const { submissionId } = req.params;
 
-      const { submissionId } =
-        req.params;
-
-
-      const submission =
-        await ShotSubmission.findByPk(
-          submissionId as string
-        );
-
+      const submission = await ShotSubmission.findByPk(submissionId as string);
 
       if (!submission) {
-        return sendResponse(
-          res,
-          404,
-          "Submission not found!"
-        );
+        return sendResponse(res, 404, "Submission not found!");
       }
-
 
       return sendResponse(
         res,
         200,
         "Submission fetched successfully",
-        submission
+        submission,
       );
-
-
     } catch (error) {
-
       console.error(error);
 
-      return sendResponse(
-        res,
-        500,
-        "Failed to fetch submission"
-      );
-
+      return sendResponse(res, 500, "Failed to fetch submission");
     }
-
   }
-
 
   // ==========================================
   // DELETE SUBMISSION
   // ==========================================
 
-  static async deleteSubmissionById(
-    req: IExtendedRequest,
-    res: Response
-  ) {
-
+  static async deleteSubmissionById(req: IExtendedRequest, res: Response) {
     try {
+      const { submissionId } = req.params;
 
-      const { submissionId } =
-        req.params;
-
-
-      const submission =
-        await ShotSubmission.findByPk(
-          submissionId as string
-        );
-
+      const submission = await ShotSubmission.findByPk(submissionId as string);
 
       if (!submission) {
-        return sendResponse(
-          res,
-          404,
-          "Submission not found!"
-        );
+        return sendResponse(res, 404, "Submission not found!");
       }
 
-
-      if (
-        submission.status ===
-        SubmissionStatus.approved
-      ) {
-
-        return sendResponse(
-          res,
-          400,
-          "Approved submission cannot be deleted!"
-        );
-
+      if (submission.status === SubmissionStatus.approved) {
+        return sendResponse(res, 400, "Approved submission cannot be deleted!");
       }
 
-
-      await googleDriveService
-        .deleteFile(
-          submission.driveFileId
-        );
-
+      await googleDriveService.deleteFile(submission.driveFileId);
 
       await submission.destroy();
 
-
-      return sendResponse(
-        res,
-        200,
-        "Submission deleted successfully"
-      );
-
-
+      return sendResponse(res, 200, "Submission deleted successfully");
     } catch (error) {
+      console.error("Delete Submission Error:", error);
 
-      console.error(
-        "Delete Submission Error:",
-        error
-      );
-
-
-      return sendResponse(
-        res,
-        500,
-        "Failed to delete submission"
-      );
-
+      return sendResponse(res, 500, "Failed to delete submission");
     }
-
   }
-
 }
-
 
 export default ShotSubmissionControllers;

@@ -1,4 +1,4 @@
-import { ProjectPriority, ProjectStatus, ReviewStatus, ShotStatus, SubmissionFileType, SubmissionStatus, UserRole } from "../../globals/types"
+import { NotificationType, ProjectPriority, ProjectStatus, ReviewStatus, ShotStatus, SubmissionFileType, SubmissionStatus, UserRole } from "../../globals/types"
 
 export interface UserAttributes {
     id: string
@@ -101,4 +101,15 @@ export interface MessageAttributes {
     message: string
     isRead: boolean
     readAt: Date | null
+}
+
+export interface NotificationAttributes {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  url: string | null;
+  isRead: boolean;
 }

@@ -1,8 +1,13 @@
 import { Response } from "express";
-import { IExtendedRequest, ShotStatus } from "../globals/types";
+import {
+  IExtendedRequest,
+  NotificationType,
+  ShotStatus,
+} from "../globals/types";
 import { sendResponse } from "../utils/sendResponse";
 import ProjectShot from "../database/models/projectShotModel";
 import ShotAssigned from "../database/models/shotAssignedModel";
+import NotificationService from "../services/notificationService";
 
 class ShotAssignController {
   //Assign shot to employee
@@ -39,6 +44,16 @@ class ShotAssignController {
       shotId: shotId as string,
       employeeId: employeeId as string,
       assignedBy: userId,
+    });
+
+    //create notification
+    await NotificationService.createNotification({
+      senderId: userId,
+      receiverId: employeeId as string,
+      title: "New Shot Assigned",
+      message: `You have been assigned shot ${shot.shotNumber}.`,
+      type: NotificationType.shotAssigned,
+      url: `/employee/shots/${shotId}`,
     });
 
     //update shot status to assigned

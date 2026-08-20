@@ -1,9 +1,9 @@
 import express from "express";
 import cors from "cors";
 import userRoutes from "./routes/userRoute";
-// import shotRoutes from "./routes/shotRoutes"
 import projectRoutes from "./routes/projectRoutes"
-// import projectAssignedRoutes from "./routes/projectAssignedRoutes"
+// import shotRoutes from "./routes/shotRoutes"
+import projectAssignedRoutes from "./routes/projectAssignedRoutes"
 // import shotAssignedRoutes from "./routes/shotAssignedRoutes"
 // import shotSubmissionRoutes from "./routes/shotSubmissionRoutes"
 // import shotReviewRoutes from "./routes/shotReviewRoutes"
@@ -36,11 +36,11 @@ app.get("/", (req, res) => {
 
 app.use("/api/auth",userRoutes)
 app.use("/api/projects",projectRoutes)
+app.use("/api/projects",projectAssignedRoutes)
 // app.use("/api/shots",shotRoutes)
 // app.use("/api/shots",shotAssignedRoutes)
 // app.use("/api/shots",shotSubmissionRoutes)
 // app.use("/api/shots",shotReviewRoutes)
-// app.use("/api/projects",projectAssignedRoutes)
 // app.use("/api/conversations",conversationRoutes)
 
 export default app;

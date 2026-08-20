@@ -1,86 +1,15 @@
 import express from "express"
-
-import authMiddleware
-    from "../middlewares/authMiddleware"
-
-import accessTo
-    from "../middlewares/roleMiddleware"
-
+import { accessToRoles, isUserLoggedIn } from "../middlewares/UserMiddleware"
 import { UserRole } from "../globals/types"
-import projectAssignedController from "../controllers/projectAssignedController"
-
-
+import errorHandler from "../utils/errorHandler"
+import projectAssignController from "../controller/projectAssignedControllers"
 const router = express.Router()
 
-
-// ==========================================
-// ASSIGN EMPLOYEE TO PROJECT
-// ==========================================
-
-router.post(
-
-    "/:projectId/employees",
-
-    authMiddleware,
-
-    accessTo(
-        UserRole.ProjectManager,
-        UserRole.Admin
-    ),
-
-    (req, res) => projectAssignedController.assignEmployeeToProject(req as any, res)
-
-)
-
-
-// ==========================================
-// GET ALL EMPLOYEES OF PROJECT
-// ==========================================
-
-router.get(
-
-    "/:projectId/employees",
-
-    authMiddleware,
-
-    projectAssignedController.getProjectEmployees
-
-)
-
-
-// ==========================================
-// GET ALL PROJECTS OF EMPLOYEE
-// ==========================================
-
-router.get(
-
-    "/employees/:employeeId/projects",
-
-    authMiddleware,
-
-    projectAssignedController.getEmployeeProjects
-
-)
-
-
-// ==========================================
-// REMOVE EMPLOYEE FROM PROJECT
-// ==========================================
-
-router.delete(
-
-    "/:projectId/assignments/:assignmentId",
-
-    authMiddleware,
-
-    accessTo(
-        UserRole.ProjectManager,
-        UserRole.Admin
-    ),
-
-    projectAssignedController.removeEmployeeFromProject
-
-)
-
-
+router.route("/:projectId/employees")
+    .post(isUserLoggedIn, accessToRoles(UserRole.Admin, UserRole.Admin), errorHandler(projectAssignController.assignEmployeesToProject))
+    .get(isUserLoggedIn, accessToRoles(UserRole.Admin, UserRole.Admin), errorHandler(projectAssignController.getEmployeesOfProject))
+    
+router.get("/employees/:employeeId/projects", isUserLoggedIn, errorHandler(projectAssignController.getAllAssignedProjectOfEmployee))
+router.delete("/:projectId/employee/:employeeId", isUserLoggedIn, accessToRoles(UserRole.Admin, UserRole.ProjectManager), errorHandler(projectAssignController.removeEmployeeFromProject))
 export default router
+

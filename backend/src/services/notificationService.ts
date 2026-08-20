@@ -7,7 +7,7 @@ import {
 
 import {
   getIO,
-} from "../sockets/notificationSocket";
+} from "../sockets/socket";
 
 
 interface CreateNotificationData {

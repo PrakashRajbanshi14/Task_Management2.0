@@ -1,43 +1,71 @@
-import { Table, Column, Model, DataType } from "sequelize-typescript";
+import {
+  Table,
+  Column,
+  Model,
+  DataType,
+  Index,
+} from "sequelize-typescript";
 import { ConversationAttributes } from "../types/types";
 
-interface ConversationCreationAttributes extends Omit<
-  ConversationAttributes,
-  "id"
-> {
+
+interface ConversationCreationAttributes
+  extends Omit<ConversationAttributes, "id"> {
   id?: string;
 }
+
 
 @Table({
   tableName: "conversations",
   modelName: "Conversation",
   timestamps: true,
+
+  indexes: [
+    {
+      unique: true,
+      fields: ["userOneId", "userTwoId"],
+    },
+  ],
 })
 class Conversation extends Model<
   ConversationAttributes,
   ConversationCreationAttributes
 > {
+
+  // ==========================================
+  // ID
+  // ==========================================
+
   @Column({
-    primaryKey: true,
     type: DataType.UUID,
     defaultValue: DataType.UUIDV4,
+    primaryKey: true,
   })
   declare id: string;
 
-  @Column({
-    type: DataType.UUID,
-  })
-  declare projectManagerId: string;
 
-  @Column({
-    type: DataType.UUID,
-  })
-  declare employeeId: string;
+  // ==========================================
+  // User One
+  // ==========================================
 
+  @Index
   @Column({
     type: DataType.UUID,
+    allowNull: false,
   })
-  declare projectId: string;
+  declare userOneId: string;
+
+
+  // ==========================================
+  // User Two
+  // ==========================================
+
+  @Index
+  @Column({
+    type: DataType.UUID,
+    allowNull: false,
+  })
+  declare userTwoId: string;
 }
+
 
 export default Conversation;

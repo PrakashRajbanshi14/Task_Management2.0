@@ -27,7 +27,7 @@ class ProjectShot extends Model<
   declare id: string;
 
   @Column({
-    type: DataType.STRING,
+    type: DataType.UUID,
   })
   declare projectId: string;
 

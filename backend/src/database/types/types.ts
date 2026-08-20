@@ -88,19 +88,18 @@ export interface ShotReviewAttributes {
 }
 
 export interface ConversationAttributes {
-    id: string
-    projectManagerId: string
-    employeeId: string
-    projectId: string
+  id: string;
+  userOneId: string
+  userTwoId: string;
 }
 
 export interface MessageAttributes {
-    id: string
-    conversationId: string
-    senderId: string
-    message: string
-    isRead: boolean
-    readAt: Date | null
+  id: string;
+  conversationId: string;
+  senderId: string;
+  message: string;
+  isRead: boolean;
+  readAt: Date | null;
 }
 
 export interface NotificationAttributes {

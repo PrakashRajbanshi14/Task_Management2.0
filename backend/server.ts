@@ -6,7 +6,7 @@ import sequelize from "./src/database/connection";
 
 import {
   initializeSocket,
-} from "./src/sockets/notificationSocket";
+} from "./src/sockets/socket";
 
 
 const PORT =
@@ -34,7 +34,7 @@ const startServer = async () => {
 
     await sequelize.sync({
 
-      force: false,
+      force: true,
 
       alter: false,
 
@@ -65,21 +65,14 @@ const startServer = async () => {
     // ==========================================
 
     server.listen(
-
       PORT,
-
       () => {
 
         console.log(
           `Server is running on http://localhost:${PORT}`
         );
 
-        console.log(
-          "Socket.IO is running successfully!"
-        );
-
       }
-
     );
 
 
@@ -93,7 +86,6 @@ const startServer = async () => {
     process.exit(1);
 
   }
-
 };
 
 

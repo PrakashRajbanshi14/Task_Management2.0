@@ -1,30 +1,25 @@
 import { Server } from "socket.io";
-import http from "http";
 
-let io: Server;
+import User from "../database/models/userModel";
 
 
-export const initializeSocket = (
-  server: http.Server
+export const registerNotificationSocket = (
+  io: Server,
 ) => {
-
-  io = new Server(server, {
-
-    cors: {
-      origin:
-        process.env.CLIENT_URL,
-
-      credentials: true,
-    },
-
-  });
-
 
   io.on("connection", (socket) => {
 
+    const user = socket.data.user;
+
+
+    if (!user) {
+      return;
+    }
+
+
     console.log(
-      "Socket connected:",
-      socket.id
+      "Notification socket ready for:",
+      user.id
     );
 
 
@@ -32,25 +27,13 @@ export const initializeSocket = (
     // Join personal user room
     // ==========================================
 
-    socket.on(
-      "join_user_room",
-      (userId: string) => {
-
-        if (!userId) {
-          return;
-        }
+    socket.join(
+      `user:${user.id}`
+    );
 
 
-        socket.join(
-          `user:${userId}`
-        );
-
-
-        console.log(
-          `User ${userId} joined notification room`
-        );
-
-      }
+    console.log(
+      `User ${user.id} joined notification room`
     );
 
 
@@ -63,33 +46,12 @@ export const initializeSocket = (
       () => {
 
         console.log(
-          "Socket disconnected:",
-          socket.id
+          "User disconnected:",
+          user.id
         );
 
       }
     );
 
   });
-
-
-  return io;
-};
-
-
-// ==========================================
-// Get Socket.IO instance
-// ==========================================
-
-export const getIO = (): Server => {
-
-  if (!io) {
-
-    throw new Error(
-      "Socket.IO has not been initialized"
-    );
-
-  }
-
-  return io;
 };

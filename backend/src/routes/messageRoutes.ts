@@ -8,8 +8,7 @@ import {
 import {
   UserRole,
 } from "../globals/types";
-import ConversationController from "../controller/conversationControllers";
-
+import MessageController from "../controller/messageControllers";
 
 const router =
   express.Router();
@@ -23,32 +22,32 @@ const chatRoles = [
 
 
 // ==========================================
-// Create / Get conversation
+// Get messages
 // ==========================================
 
-router.post(
-  "/",
+router.get(
+  "/:conversationId",
 
   isUserLoggedIn,
 
   accessToRoles(...chatRoles),
 
-  ConversationController.createConversation,
+  MessageController.getMessages,
 );
 
 
 // ==========================================
-// Get my conversations
+// Mark messages as read
 // ==========================================
 
-router.get(
-  "/",
+router.patch(
+  "/:conversationId/read",
 
   isUserLoggedIn,
 
   accessToRoles(...chatRoles),
 
-  ConversationController.getMyConversations,
+  MessageController.markMessagesAsRead,
 );
 
 

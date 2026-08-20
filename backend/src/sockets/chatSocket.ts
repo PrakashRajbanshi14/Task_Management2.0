@@ -1,359 +1,344 @@
-import { Server as SocketIOServer } from "socket.io";
-import { Server as HTTPServer } from "http";
-import jwt from "jsonwebtoken";
+import { Server } from "socket.io";
+
+import { Op } from "sequelize";
+
+import Conversation from "../database/models/conversationModel";
 
 import Message from "../database/models/messageModel";
-import Conversation from "../database/models/conversationModel";
+
 import User from "../database/models/userModel";
+
+import conversationService from "../services/conversationService";
+
 import { UserRole } from "../globals/types";
 
-interface JwtPayload {
-  userId: string;
-}
+import { AuthenticatedSocket } from "./types";
 
-// Store active users
-const activeUsers: Map<string, string> = new Map(); // userId -> socketId
+const allowedRoles = [
+  UserRole.Employee,
+  UserRole.ProjectManager,
+  UserRole.Admin,
+];
 
-export function initializeSocket(server: HTTPServer) {
-  const io = new SocketIOServer(server, {
-    cors: {
-      origin: "*",
-      methods: ["GET", "POST"],
-    },
-  });
+// ==========================================
+// Check allowed chat combination
+// ==========================================
 
-  // Middleware to authenticate socket connections
-  io.use((socket, next) => {
-    const token = socket.handshake.auth.token;
+const canUsersChat = (userOne: User, userTwo: User) => {
+  const roles = [userOne.role, userTwo.role];
 
-    if (!token) {
-      return next(new Error("Authentication error"));
-    }
+  const employeePM =
+    roles.includes(UserRole.Employee) &&
+    roles.includes(UserRole.ProjectManager);
 
-    try {
-      const decoded = jwt.verify(
-        token,
-        process.env.JWT_ACCESS_SECRET as string
-      ) as JwtPayload;
+  const employeeAdmin =
+    roles.includes(UserRole.Employee) && roles.includes(UserRole.Admin);
 
-      socket.data.userId = decoded.userId;
+  const pmAdmin =
+    roles.includes(UserRole.ProjectManager) && roles.includes(UserRole.Admin);
 
-      next();
-    } catch (error) {
-      next(new Error("Invalid token"));
-    }
-  });
+  return employeePM || employeeAdmin || pmAdmin;
+};
 
-  // Connection event
-  io.on("connection", async (socket) => {
-    const userId = socket.data.userId;
+// ==========================================
+// Chat Socket
+// ==========================================
 
-    console.log(`User ${userId} connected with socket ${socket.id}`);
+export const registerChatSocket = (io: Server) => {
+  io.on("connection", (socket: AuthenticatedSocket) => {
+    const user = socket.data.user;
 
-    // Store active user
-    activeUsers.set(userId, socket.id);
-
-    // Broadcast user online status
-    io.emit("userOnline", {
-      userId,
-
-      status: "online",
-    });
+    console.log(`Chat connected: ${user.id}`);
 
     // ==========================================
-    // JOIN CONVERSATION ROOM
+    // Join personal user room
     // ==========================================
 
-    socket.on("joinConversation", async (conversationId: string) => {
+    socket.join(`user:${user.id}`);
+
+    // ==========================================
+    // Join Conversation
+    // ==========================================
+
+    socket.on("join_conversation", async (conversationId: string) => {
       try {
-        // Verify conversation exists and user is a participant
-        const conversation = await Conversation.findByPk(conversationId);
+        const conversation = await Conversation.findOne({
+          where: {
+            id: conversationId,
+
+            [Op.or]: [
+              {
+                userOneId: user.id,
+              },
+
+              {
+                userTwoId: user.id,
+              },
+            ],
+          },
+        });
 
         if (!conversation) {
-          socket.emit("error", {
-            message: "Conversation not found",
+          socket.emit("chat_error", {
+            message: "You are not a member of this conversation.",
           });
 
           return;
         }
 
-        // Check if user is a participant
-        if (
-          conversation.projectManagerId !== userId &&
-          conversation.employeeId !== userId
-        ) {
-          socket.emit("error", {
-            message: "You are not a participant of this conversation",
-          });
+        socket.join(`conversation:${conversationId}`);
 
-          return;
-        }
-
-        // Join socket to room
-        socket.join(conversationId);
-
-        console.log(`User ${userId} joined conversation ${conversationId}`);
-
-        // Notify other participants
-        socket.to(conversationId).emit("userJoined", {
-          userId,
-
+        socket.emit("conversation_joined", {
           conversationId,
         });
       } catch (error) {
         console.error("Join Conversation Error:", error);
-
-        socket.emit("error", {
-          message: "Error joining conversation",
-        });
       }
     });
 
     // ==========================================
-    // SEND MESSAGE (REAL-TIME)
+    // Leave Conversation
+    // ==========================================
+
+    socket.on("leave_conversation", (conversationId: string) => {
+      socket.leave(`conversation:${conversationId}`);
+    });
+
+    // ==========================================
+    // Send Message
     // ==========================================
 
     socket.on(
-      "sendMessage",
-      async (
-        data: {
-          conversationId: string;
-          message: string;
-        },
-        callback
-      ) => {
+      "send_message",
+      async (data: { conversationId: string; message: string }) => {
         try {
-          const { conversationId, message: messageText } = data;
+          const { conversationId, message } = data;
 
+          // ==========================================
           // Validate message
-          if (!messageText || messageText.trim() === "") {
-            callback({
-              success: false,
+          // ==========================================
 
-              message: "Message cannot be empty",
+          if (!conversationId || !message?.trim()) {
+            socket.emit("chat_error", {
+              message: "Conversation ID and message are required.",
             });
 
             return;
           }
 
-          // Verify conversation exists
+          // ==========================================
+          // Find conversation
+          // ==========================================
+
           const conversation = await Conversation.findByPk(conversationId);
 
           if (!conversation) {
-            callback({
-              success: false,
-
-              message: "Conversation not found",
+            socket.emit("chat_error", {
+              message: "Conversation not found.",
             });
 
             return;
           }
 
-          // Check if user is a participant
+          // ==========================================
+          // Check sender belongs to conversation
+          // ==========================================
+
+          const isParticipant =
+            conversation.userOneId === user.id ||
+            conversation.userTwoId === user.id;
+
+          if (!isParticipant) {
+            socket.emit("chat_error", {
+              message: "You are not part of this conversation.",
+            });
+
+            return;
+          }
+
+          // ==========================================
+          // Find receiver
+          // ==========================================
+
+          const receiverId =
+            conversation.userOneId === user.id
+              ? conversation.userTwoId
+              : conversation.userOneId;
+
+          const receiver = await User.findByPk(receiverId);
+
+          if (!receiver) {
+            socket.emit("chat_error", {
+              message: "Receiver not found.",
+            });
+
+            return;
+          }
+
+          // ==========================================
+          // Check roles
+          // ==========================================
+
           if (
-            conversation.projectManagerId !== userId &&
-            conversation.employeeId !== userId
+            !allowedRoles.includes(user.role as UserRole) ||
+            !allowedRoles.includes(receiver.role as UserRole)
           ) {
-            callback({
-              success: false,
-
-              message: "You are not a participant of this conversation",
+            socket.emit("chat_error", {
+              message: "Chat is not allowed.",
             });
 
             return;
           }
 
-          // Create message in database
-          const newMessage = await Message.create({
+          if (!canUsersChat(user, receiver)) {
+            socket.emit("chat_error", {
+              message: "These users cannot chat with each other.",
+            });
+
+            return;
+          }
+
+          // ==========================================
+          // Save message
+          // ==========================================
+
+          const savedMessage = await Message.create({
             conversationId,
 
-            senderId: userId,
+            senderId: user.id,
 
-            message: messageText.trim(),
+            message: message.trim(),
 
             isRead: false,
 
             readAt: null,
           });
 
-          // Fetch message with sender details
-          const messageWithSender = await Message.findByPk(newMessage.id, {
+          // ==========================================
+          // Get complete message
+          // ==========================================
+
+          const completeMessage = await Message.findByPk(savedMessage.id, {
             include: [
               {
                 model: User,
-
                 as: "sender",
 
-                attributes: [
-                  "id",
-
-                  "userName",
-
-                  "fullName",
-
-                  "profileImage",
-                ],
+                attributes: ["id", "fullName", "profileImage", "role"],
               },
             ],
-          }) as any;
-
-          // Broadcast message to all participants in conversation
-          io.to(conversationId).emit("newMessage", {
-            id: messageWithSender?.id,
-
-            conversationId,
-
-            sender: messageWithSender?.sender,
-
-            message: messageWithSender?.message,
-
-            isRead: messageWithSender?.isRead,
-
-            createdAt: messageWithSender?.createdAt,
           });
 
-          // Update conversation timestamp by touching it
-          await conversation.save();
+          // ==========================================
+          // Send to conversation
+          // ==========================================
 
-          // Callback to sender
-          callback({
-            success: true,
+          io.to(`conversation:${conversationId}`).emit(
+            "new_message",
+            completeMessage,
+          );
 
-            message: "Message sent successfully",
+          // ==========================================
+          // Send notification to receiver
+          // ==========================================
 
-            data: {
-              id: messageWithSender?.id,
+          io.to(`user:${receiverId}`).emit("new_message_notification", {
+            conversationId,
 
-              message: messageWithSender?.message,
-
-              createdAt: messageWithSender?.createdAt,
-            },
+            message: completeMessage,
           });
         } catch (error) {
           console.error("Send Message Error:", error);
 
-          callback({
-            success: false,
-
-            message: "Error sending message",
+          socket.emit("chat_error", {
+            message: "Failed to send message.",
           });
         }
-      }
+      },
     );
 
     // ==========================================
-    // MARK MESSAGE AS READ (REAL-TIME)
+    // Typing
     // ==========================================
 
-    socket.on(
-      "markAsRead",
-      async (data: { messageId: string; conversationId: string }, callback) => {
-        try {
-          const { messageId, conversationId } = data;
+    socket.on("typing", (conversationId: string) => {
+      socket.to(`conversation:${conversationId}`).emit("user_typing", {
+        userId: user.id,
+      });
+    });
 
-          // Update message
-          await Message.update(
-            {
-              isRead: true,
+    // ==========================================
+    // Stop Typing
+    // ==========================================
 
-              readAt: new Date(),
-            },
+    socket.on("stop_typing", (conversationId: string) => {
+      socket.to(`conversation:${conversationId}`).emit("user_stopped_typing", {
+        userId: user.id,
+      });
+    });
 
-            {
-              where: {
-                id: messageId,
+    // ==========================================
+    // Mark messages as read
+    // ==========================================
+
+    socket.on("mark_messages_read", async (conversationId: string) => {
+      try {
+        const conversation = await Conversation.findOne({
+          where: {
+            id: conversationId,
+
+            [Op.or]: [
+              {
+                userOneId: user.id,
               },
-            }
-          );
 
-          // Broadcast read status to all participants
-          io.to(conversationId).emit("messageRead", {
-            messageId,
+              {
+                userTwoId: user.id,
+              },
+            ],
+          },
+        });
 
+        if (!conversation) {
+          return;
+        }
+
+        await Message.update(
+          {
             isRead: true,
 
             readAt: new Date(),
-          });
+          },
 
-          callback({
-            success: true,
+          {
+            where: {
+              conversationId,
 
-            message: "Message marked as read",
-          });
-        } catch (error) {
-          console.error("Mark as Read Error:", error);
+              senderId: {
+                [Op.ne]: user.id,
+              },
 
-          callback({
-            success: false,
+              isRead: false,
+            },
+          },
+        );
 
-            message: "Error marking message as read",
-          });
-        }
-      }
-    );
+        io.to(`conversation:${conversationId}`).emit("messages_read", {
+          conversationId,
 
-    // ==========================================
-    // TYPING INDICATOR
-    // ==========================================
-
-    socket.on(
-      "typing",
-      (data: { conversationId: string; userName: string }) => {
-        socket.to(data.conversationId).emit("userTyping", {
-          userId,
-
-          userName: data.userName,
-
-          conversationId: data.conversationId,
+          readBy: user.id,
         });
+      } catch (error) {
+        console.error("Mark Read Error:", error);
       }
-    );
-
-    socket.on(
-      "stopTyping",
-      (data: { conversationId: string }) => {
-        socket.to(data.conversationId).emit("userStoppedTyping", {
-          userId,
-
-          conversationId: data.conversationId,
-        });
-      }
-    );
-
-    // ==========================================
-    // LEAVE CONVERSATION ROOM
-    // ==========================================
-
-    socket.on("leaveConversation", (conversationId: string) => {
-      socket.leave(conversationId);
-
-      socket.to(conversationId).emit("userLeft", {
-        userId,
-
-        conversationId,
-      });
-
-      console.log(`User ${userId} left conversation ${conversationId}`);
     });
 
     // ==========================================
-    // DISCONNECT EVENT
+    // Disconnect
     // ==========================================
 
     socket.on("disconnect", () => {
-      // Remove from active users
-      activeUsers.delete(userId);
-
-      // Broadcast user offline status
-      io.emit("userOffline", {
-        userId,
-
-        status: "offline",
-      });
-
-      console.log(`User ${userId} disconnected`);
+      console.log(`Chat disconnected: ${user.id}`);
     });
   });
-
-  return io;
-}
+};

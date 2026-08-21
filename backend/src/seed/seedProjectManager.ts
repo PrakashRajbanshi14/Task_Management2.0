@@ -34,8 +34,6 @@ const seedProjectManager = async () => {
 
       fullName: "Project Manager",
 
-      phone: null,
-
       profileImage: null,
 
       role: UserRole.ProjectManager,

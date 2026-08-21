@@ -28,7 +28,6 @@ const seedAdmin = async () => {
       password: hashedPassword,
       googleId: null,
       fullName: "Super Admin",
-      phone: null,
       profileImage: null,
       role: UserRole.Admin,
       isActive: true,

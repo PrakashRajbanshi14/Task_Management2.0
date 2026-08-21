@@ -7,6 +7,12 @@ import { IExtendedRequest } from "../globals/types"
 import { isUserLoggedIn } from "../middlewares/UserMiddleware"
 const router = express.Router()
 
+//register
+router.post("/register", errorHandler(UserController.register))
+
+//login
+router.post("/login", errorHandler(UserController.login))
+
 // GOOGLE LOGIN
 router.get(
     "/google",

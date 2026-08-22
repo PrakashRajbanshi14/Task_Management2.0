@@ -12,53 +12,50 @@ import ProjectShot from "./models/projectShotModel";
 import ShotAssigned from "./models/shotAssignedModel";
 
 import ShotSubmission from "./models/shotSubmissionModel";
+import SubmissionFile from "./models/submissionFileModel";
+
 import ShotReview from "./models/shotReviewModel";
 
 import Notification from "./models/notificationModel";
 
 import Conversation from "./models/conversationModel";
 import Message from "./models/messageModel";
+import EmployeeWorkShot from "./models/employeeWorkShotModel";
+import EmployeeWorkDetail from "./models/employeeWorkDetailModel";
 
 
 if (!envConfig.connectionString) {
-
   throw new Error(
     "Missing DB_URI or DATABASE_URL environment variable"
   );
-
 }
 
 
 const sequelize = new Sequelize(
   envConfig.connectionString,
   {
-
     models: [
-
       User,
-
       Employee,
 
       Project,
-
       ProjectAssigned,
 
       ProjectShot,
-
       ShotAssigned,
 
       ShotSubmission,
+      SubmissionFile,
 
       ShotReview,
 
       Notification,
 
       Conversation,
-
       Message,
-
+      EmployeeWorkDetail,
+      EmployeeWorkShot
     ],
-
   }
 );
 
@@ -68,20 +65,13 @@ const sequelize = new Sequelize(
 // =====================================================
 
 Project.belongsTo(User, {
-
   foreignKey: "projectManagerId",
-
   as: "projectManager",
-
 });
 
-
 User.hasMany(Project, {
-
   foreignKey: "projectManagerId",
-
   as: "managedProjects",
-
 });
 
 
@@ -90,20 +80,13 @@ User.hasMany(Project, {
 // =====================================================
 
 Employee.belongsTo(User, {
-
   foreignKey: "userId",
-
   as: "employee",
-
 });
 
-
 User.hasOne(Employee, {
-
   foreignKey: "userId",
-
   as: "employee",
-
 });
 
 
@@ -112,20 +95,13 @@ User.hasOne(Employee, {
 // =====================================================
 
 ProjectAssigned.belongsTo(Project, {
-
   foreignKey: "projectId",
-
   as: "project",
-
 });
 
-
 Project.hasMany(ProjectAssigned, {
-
   foreignKey: "projectId",
-
   as: "projectAssignments",
-
 });
 
 
@@ -134,20 +110,13 @@ Project.hasMany(ProjectAssigned, {
 // =====================================================
 
 ProjectAssigned.belongsTo(User, {
-
   foreignKey: "employeeId",
-
   as: "employee",
-
 });
 
-
 User.hasMany(ProjectAssigned, {
-
   foreignKey: "employeeId",
-
   as: "assignedProjects",
-
 });
 
 
@@ -156,20 +125,13 @@ User.hasMany(ProjectAssigned, {
 // =====================================================
 
 ProjectAssigned.belongsTo(User, {
-
   foreignKey: "assignedBy",
-
   as: "assignedByUser",
-
 });
 
-
 User.hasMany(ProjectAssigned, {
-
   foreignKey: "assignedBy",
-
   as: "projectAssignmentsCreated",
-
 });
 
 
@@ -178,20 +140,13 @@ User.hasMany(ProjectAssigned, {
 // =====================================================
 
 ProjectShot.belongsTo(Project, {
-
   foreignKey: "projectId",
-
   as: "project",
-
 });
 
-
 Project.hasMany(ProjectShot, {
-
   foreignKey: "projectId",
-
   as: "shots",
-
 });
 
 
@@ -200,20 +155,13 @@ Project.hasMany(ProjectShot, {
 // =====================================================
 
 ProjectShot.belongsTo(User, {
-
   foreignKey: "createdBy",
-
   as: "creator",
-
 });
 
-
 User.hasMany(ProjectShot, {
-
   foreignKey: "createdBy",
-
   as: "createdShots",
-
 });
 
 
@@ -222,20 +170,13 @@ User.hasMany(ProjectShot, {
 // =====================================================
 
 ShotAssigned.belongsTo(ProjectShot, {
-
   foreignKey: "shotId",
-
   as: "shot",
-
 });
 
-
 ProjectShot.hasOne(ShotAssigned, {
-
   foreignKey: "shotId",
-
   as: "assignment",
-
 });
 
 
@@ -244,20 +185,13 @@ ProjectShot.hasOne(ShotAssigned, {
 // =====================================================
 
 ShotAssigned.belongsTo(User, {
-
   foreignKey: "employeeId",
-
   as: "employee",
-
 });
 
-
 User.hasMany(ShotAssigned, {
-
   foreignKey: "employeeId",
-
   as: "assignedShots",
-
 });
 
 
@@ -266,20 +200,13 @@ User.hasMany(ShotAssigned, {
 // =====================================================
 
 ShotAssigned.belongsTo(User, {
-
   foreignKey: "assignedBy",
-
   as: "assignedByUser",
-
 });
 
-
 User.hasMany(ShotAssigned, {
-
   foreignKey: "assignedBy",
-
   as: "shotAssignmentsCreated",
-
 });
 
 
@@ -288,42 +215,43 @@ User.hasMany(ShotAssigned, {
 // =====================================================
 
 ShotSubmission.belongsTo(ProjectShot, {
-
   foreignKey: "shotId",
-
   as: "shot",
-
 });
 
-
 ProjectShot.hasMany(ShotSubmission, {
-
   foreignKey: "shotId",
-
   as: "submissions",
-
 });
 
 
 // =====================================================
-// EMPLOYEE → SUBMISSIONS
+// USER → SUBMISSIONS
 // =====================================================
 
 ShotSubmission.belongsTo(User, {
-
   foreignKey: "submittedBy",
-
   as: "submitter",
+});
 
+User.hasMany(ShotSubmission, {
+  foreignKey: "submittedBy",
+  as: "submissions",
 });
 
 
-User.hasMany(ShotSubmission, {
+// =====================================================
+// SUBMISSION → FILES
+// =====================================================
 
-  foreignKey: "submittedBy",
+ShotSubmission.hasMany(SubmissionFile, {
+  foreignKey: "submissionId",
+  as: "files",
+});
 
-  as: "submissions",
-
+SubmissionFile.belongsTo(ShotSubmission, {
+  foreignKey: "submissionId",
+  as: "submission",
 });
 
 
@@ -332,42 +260,28 @@ User.hasMany(ShotSubmission, {
 // =====================================================
 
 ShotReview.belongsTo(ShotSubmission, {
-
   foreignKey: "submissionId",
-
   as: "submission",
-
 });
 
-
 ShotSubmission.hasMany(ShotReview, {
-
   foreignKey: "submissionId",
-
   as: "reviews",
-
 });
 
 
 // =====================================================
-// PROJECT MANAGER → REVIEWS
+// USER → REVIEWS
 // =====================================================
 
 ShotReview.belongsTo(User, {
-
   foreignKey: "reviewedBy",
-
   as: "reviewer",
-
 });
 
-
 User.hasMany(ShotReview, {
-
   foreignKey: "reviewedBy",
-
   as: "reviews",
-
 });
 
 
@@ -376,20 +290,13 @@ User.hasMany(ShotReview, {
 // =====================================================
 
 Conversation.belongsTo(User, {
-
   foreignKey: "userOneId",
-
   as: "userOne",
-
 });
 
-
 User.hasMany(Conversation, {
-
   foreignKey: "userOneId",
-
   as: "conversationsAsUserOne",
-
 });
 
 
@@ -398,64 +305,43 @@ User.hasMany(Conversation, {
 // =====================================================
 
 Conversation.belongsTo(User, {
-
   foreignKey: "userTwoId",
-
   as: "userTwo",
-
 });
 
-
 User.hasMany(Conversation, {
-
   foreignKey: "userTwoId",
-
   as: "conversationsAsUserTwo",
-
 });
 
 
 // =====================================================
-// CONVERSATION → MESSAGE
+// CONVERSATION → MESSAGES
 // =====================================================
 
 Conversation.hasMany(Message, {
-
   foreignKey: "conversationId",
-
   as: "messages",
-
 });
 
-
 Message.belongsTo(Conversation, {
-
   foreignKey: "conversationId",
-
   as: "conversation",
-
 });
 
 
 // =====================================================
-// USER → MESSAGE / SENDER
+// USER → SENT MESSAGES
 // =====================================================
 
 Message.belongsTo(User, {
-
   foreignKey: "senderId",
-
   as: "sender",
-
 });
 
-
 User.hasMany(Message, {
-
   foreignKey: "senderId",
-
   as: "sentMessages",
-
 });
 
 
@@ -464,20 +350,13 @@ User.hasMany(Message, {
 // =====================================================
 
 Notification.belongsTo(User, {
-
   foreignKey: "receiverId",
-
   as: "receiver",
-
 });
 
-
 User.hasMany(Notification, {
-
   foreignKey: "receiverId",
-
   as: "receivedNotifications",
-
 });
 
 
@@ -486,22 +365,58 @@ User.hasMany(Notification, {
 // =====================================================
 
 Notification.belongsTo(User, {
-
   foreignKey: "senderId",
-
   as: "sender",
-
 });
-
 
 User.hasMany(Notification, {
-
   foreignKey: "senderId",
-
   as: "sentNotifications",
-
 });
 
+// =====================================================
+// EMPLOYEE WORK DETAIL → WORK SHOTS
+// =====================================================
+
+EmployeeWorkShot.belongsTo(EmployeeWorkDetail, {
+  foreignKey: "workDetailId",
+  as: "workDetail",
+});
+
+EmployeeWorkDetail.hasMany(EmployeeWorkShot, {
+  foreignKey: "workDetailId",
+  as: "workShots",
+});
+
+
+// =====================================================
+// PROJECT → EMPLOYEE WORK SHOTS
+// =====================================================
+
+EmployeeWorkShot.belongsTo(Project, {
+  foreignKey: "projectId",
+  as: "project",
+});
+
+Project.hasMany(EmployeeWorkShot, {
+  foreignKey: "projectId",
+  as: "employeeWorkShots",
+});
+
+
+// =====================================================
+// PROJECT SHOT → EMPLOYEE WORK SHOTS
+// =====================================================
+
+EmployeeWorkShot.belongsTo(ProjectShot, {
+  foreignKey: "shotId",
+  as: "shot",
+});
+
+ProjectShot.hasMany(EmployeeWorkShot, {
+  foreignKey: "shotId",
+  as: "employeeWorkShots",
+});
 
 // try {
 //   sequelize

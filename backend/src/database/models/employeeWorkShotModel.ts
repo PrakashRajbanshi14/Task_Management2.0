@@ -6,37 +6,31 @@ import {
 } from "sequelize-typescript";
 
 import {
-  ShotSubmissionAttributes,
+  EmployeeWorkShotAttributes,
 } from "../types/types";
 
-import {
-  SubmissionStatus,
-} from "../../globals/types";
 
-
-interface ShotSubmissionCreationAttributes
+interface EmployeeWorkShotCreationAttributes
   extends Omit<
-    ShotSubmissionAttributes,
-    "id" | "status"
+    EmployeeWorkShotAttributes,
+    "id"
   > {
 
   id?: string;
 
-  status?: SubmissionStatus;
 }
 
 
 @Table({
-  tableName: "shot_submissions",
-
-  modelName: "ShotSubmission",
-
+  tableName: "employee_work_shots",
+  modelName: "EmployeeWorkShot",
   timestamps: true,
 })
-class ShotSubmission extends Model<
-  ShotSubmissionAttributes,
-  ShotSubmissionCreationAttributes
+class EmployeeWorkShot extends Model<
+  EmployeeWorkShotAttributes,
+  EmployeeWorkShotCreationAttributes
 > {
+
 
   // ==========================================
   // ID
@@ -44,12 +38,32 @@ class ShotSubmission extends Model<
 
   @Column({
     primaryKey: true,
-
     type: DataType.UUID,
-
     defaultValue: DataType.UUIDV4,
   })
   declare id: string;
+
+
+  // ==========================================
+  // WORK DETAIL ID
+  // ==========================================
+
+  @Column({
+    type: DataType.UUID,
+    allowNull: false,
+  })
+  declare workDetailId: string;
+
+
+  // ==========================================
+  // PROJECT ID
+  // ==========================================
+
+  @Column({
+    type: DataType.UUID,
+    allowNull: false,
+  })
+  declare projectId: string;
 
 
   // ==========================================
@@ -58,72 +72,24 @@ class ShotSubmission extends Model<
 
   @Column({
     type: DataType.UUID,
-
     allowNull: false,
   })
   declare shotId: string;
 
-
-  // ==========================================
-  // SUBMITTED BY
-  // ==========================================
-
-  @Column({
-    type: DataType.UUID,
-
-    allowNull: false,
-  })
-  declare submittedBy: string;
-
-
-  // ==========================================
-  // VERSION
-  // ==========================================
-
-  @Column({
-    type: DataType.INTEGER,
-
-    allowNull: false,
-  })
-  declare version: number;
-
-
   // ==========================================
   // VIDEO LENGTH
   //
-  // Store in seconds
+  // Store seconds
   // ==========================================
 
   @Column({
     type: DataType.BIGINT,
-
-    allowNull: true,
-  })
-  declare videoLength: number | null;
-
-
-  // ==========================================
-  // STATUS
-  // ==========================================
-
-  @Column({
-    type: DataType.STRING,
-
     allowNull: false,
-
-    defaultValue:
-      SubmissionStatus.submitted,
-
-    validate: {
-      isIn: [
-        Object.values(
-          SubmissionStatus,
-        ),
-      ],
-    },
+    defaultValue: 0,
   })
-  declare status: SubmissionStatus;
+  declare videoLength: number;
+
 }
 
 
-export default ShotSubmission;
+export default EmployeeWorkShot;

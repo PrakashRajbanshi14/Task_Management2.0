@@ -6,128 +6,137 @@ import {
 } from "sequelize-typescript";
 
 import {
-  MessageAttributes,
+  SubmissionFileAttributes,
 } from "../types/types";
 
 import {
-  MessageType,
+  SubmissionFileType,
 } from "../../globals/types";
 
 
-interface MessageCreationAttributes
-  extends Omit<MessageAttributes, "id"> {
+interface SubmissionFileCreationAttributes
+  extends Omit<
+    SubmissionFileAttributes,
+    "id"
+  > {
 
   id?: string;
-
 }
 
 
 @Table({
-  tableName: "messages",
-  modelName: "Message",
+  tableName: "submission_files",
+
+  modelName: "SubmissionFile",
+
   timestamps: true,
 })
-
-
-class Message
-  extends Model<
-    MessageAttributes,
-    MessageCreationAttributes
-  > {
-
+class SubmissionFile extends Model<
+  SubmissionFileAttributes,
+  SubmissionFileCreationAttributes
+> {
 
   // ==========================================
   // ID
   // ==========================================
 
   @Column({
-    type: DataType.UUID,
-    defaultValue: DataType.UUIDV4,
     primaryKey: true,
+
+    type: DataType.UUID,
+
+    defaultValue: DataType.UUIDV4,
   })
   declare id: string;
 
 
   // ==========================================
-  // CONVERSATION ID
+  // SUBMISSION ID
   // ==========================================
 
   @Column({
     type: DataType.UUID,
+
     allowNull: false,
   })
-  declare conversationId: string;
+  declare submissionId: string;
 
 
   // ==========================================
-  // SENDER
-  // ==========================================
-
-  @Column({
-    type: DataType.UUID,
-    allowNull: false,
-  })
-  declare senderId: string;
-
-
-  // ==========================================
-  // MESSAGE
-  // ==========================================
-
-  @Column({
-    type: DataType.TEXT,
-    allowNull: false,
-  })
-  declare message: string;
-
-
-  // ==========================================
-  // MESSAGE TYPE
+  // FILE TYPE
   // ==========================================
 
   @Column({
     type: DataType.ENUM(
-      MessageType.text,
-      MessageType.audioCall,
-      MessageType.videoCall,
-      MessageType.screenShare,
+      SubmissionFileType.video,
+
+      SubmissionFileType.projectFile,
     ),
 
     allowNull: false,
-
-    defaultValue: MessageType.text,
-
-    validate: {
-      isIn: [
-        Object.values(MessageType),
-      ],
-    },
   })
-  declare messageType: MessageType;
+  declare fileType: SubmissionFileType;
 
 
   // ==========================================
-  // READ STATUS
+  // GOOGLE DRIVE FILE ID
   // ==========================================
 
   @Column({
-    type: DataType.BOOLEAN,
-    defaultValue: false,
+    type: DataType.STRING,
+
+    allowNull: false,
   })
-  declare isRead: boolean;
+  declare driveFileId: string;
 
 
   // ==========================================
-  // READ AT
+  // GOOGLE DRIVE URL
   // ==========================================
 
   @Column({
-    type: DataType.DATE,
+    type: DataType.TEXT,
+
     allowNull: true,
   })
-  declare readAt: Date | null;
+  declare driveFileUrl: string | null;
 
+
+  // ==========================================
+  // ORIGINAL FILE NAME
+  // ==========================================
+
+  @Column({
+    type: DataType.STRING,
+
+    allowNull: false,
+  })
+  declare fileName: string;
+
+
+  // ==========================================
+  // FILE SIZE
+  // ==========================================
+
+  @Column({
+    type: DataType.BIGINT,
+
+    allowNull: true,
+  })
+  declare fileSize: number | null;
+
+
+  // ==========================================
+  // MIME TYPE
+  // ==========================================
+
+  @Column({
+    type: DataType.STRING,
+
+    allowNull: true,
+  })
+  declare mimeType: string | null;
 }
 
 
-export default Message;
+export default SubmissionFile;

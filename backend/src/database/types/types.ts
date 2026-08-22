@@ -1,4 +1,4 @@
-import { NotificationType, ProjectPriority, ProjectStatus, ReviewStatus, ShotStatus, SubmissionFileType, SubmissionStatus, UserRole } from "../../globals/types"
+import { MessageType, NotificationType, ProjectPriority, ProjectStatus, ReviewStatus, SalaryStatus, ShotStatus, SubmissionFileType, SubmissionStatus, UserRole } from "../../globals/types"
 
 export interface UserAttributes {
     id: string
@@ -69,22 +69,27 @@ export interface ShotSubmissionAttributes {
     shotId: string
     submittedBy: string
     version: number
-    mimeType: string
-    driveFileId: string
-    driveFileUrl: string | null
-    fileName: string
-    fileSize: number | null
-    fileType : SubmissionFileType
+    videoLength: number;
     status: SubmissionStatus
+}
+
+export interface SubmissionFileAttributes {
+    id: string;
+    submissionId: string;
+    fileType: SubmissionFileType;
+    driveFileId: string;
+    driveFileUrl: string | null;
+    fileName: string;
+    fileSize: number | null;
+    mimeType: string | null;
 }
 
 export interface ShotReviewAttributes {
     id: string
-    shotId: string
     submissionId: string
     reviewedBy: string
     status: ReviewStatus
-    feedback: string | null
+    comment: string | null
 }
 
 export interface ConversationAttributes {
@@ -95,10 +100,17 @@ export interface ConversationAttributes {
 
 export interface MessageAttributes {
   id: string;
+
   conversationId: string;
+
   senderId: string;
+
   message: string;
+
+  messageType: MessageType;
+
   isRead: boolean;
+
   readAt: Date | null;
 }
 
@@ -111,4 +123,35 @@ export interface NotificationAttributes {
   type: NotificationType;
   url: string | null;
   isRead: boolean;
+}
+
+export interface EmployeeWorkDetailAttributes {
+  id: string;
+
+  employeeId: string;
+
+  month: number;
+
+  year: number;
+
+  totalVideoLength: number;
+
+  salaryStatus: SalaryStatus;
+
+  salaryAmount: number | null;
+
+  notes: string | null;
+}
+
+
+export interface EmployeeWorkShotAttributes {
+  id: string;
+
+  workDetailId: string;
+
+  projectId: string;
+
+  shotId: string;
+
+  videoLength: number;
 }

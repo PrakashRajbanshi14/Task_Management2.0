@@ -6,16 +6,19 @@ import {
 } from "sequelize-typescript";
 
 import {
-  MessageAttributes,
+  EmployeeWorkDetailAttributes,
 } from "../types/types";
 
 import {
-  MessageType,
+  SalaryStatus,
 } from "../../globals/types";
 
 
-interface MessageCreationAttributes
-  extends Omit<MessageAttributes, "id"> {
+interface EmployeeWorkDetailCreationAttributes
+  extends Omit<
+    EmployeeWorkDetailAttributes,
+    "id"
+  > {
 
   id?: string;
 
@@ -23,17 +26,14 @@ interface MessageCreationAttributes
 
 
 @Table({
-  tableName: "messages",
-  modelName: "Message",
+  tableName: "employee_work_details",
+  modelName: "EmployeeWorkDetail",
   timestamps: true,
 })
-
-
-class Message
-  extends Model<
-    MessageAttributes,
-    MessageCreationAttributes
-  > {
+class EmployeeWorkDetail extends Model<
+  EmployeeWorkDetailAttributes,
+  EmployeeWorkDetailCreationAttributes
+> {
 
 
   // ==========================================
@@ -41,93 +41,100 @@ class Message
   // ==========================================
 
   @Column({
+    primaryKey: true,
     type: DataType.UUID,
     defaultValue: DataType.UUIDV4,
-    primaryKey: true,
   })
   declare id: string;
 
 
   // ==========================================
-  // CONVERSATION ID
+  // EMPLOYEE ID
   // ==========================================
 
   @Column({
     type: DataType.UUID,
     allowNull: false,
   })
-  declare conversationId: string;
+  declare employeeId: string;
 
 
   // ==========================================
-  // SENDER
-  // ==========================================
-
-  @Column({
-    type: DataType.UUID,
-    allowNull: false,
-  })
-  declare senderId: string;
-
-
-  // ==========================================
-  // MESSAGE
+  // MONTH
   // ==========================================
 
   @Column({
-    type: DataType.TEXT,
+    type: DataType.INTEGER,
     allowNull: false,
   })
-  declare message: string;
+  declare month: number;
 
 
   // ==========================================
-  // MESSAGE TYPE
+  // YEAR
+  // ==========================================
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+  })
+  declare year: number;
+
+
+  // ==========================================
+  // TOTAL VIDEO LENGTH
+  //
+  // Store seconds
+  //
+  // Example:
+  // 3600 = 1 hour
+  // ==========================================
+
+  @Column({
+    type: DataType.BIGINT,
+    allowNull: false,
+    defaultValue: 0,
+  })
+  declare totalVideoLength: number;
+
+
+  // ==========================================
+  // SALARY STATUS
   // ==========================================
 
   @Column({
     type: DataType.ENUM(
-      MessageType.text,
-      MessageType.audioCall,
-      MessageType.videoCall,
-      MessageType.screenShare,
+      SalaryStatus.Paid,
+      SalaryStatus.Unpaid,
     ),
-
     allowNull: false,
-
-    defaultValue: MessageType.text,
-
-    validate: {
-      isIn: [
-        Object.values(MessageType),
-      ],
-    },
+    defaultValue: SalaryStatus.Unpaid,
   })
-  declare messageType: MessageType;
+  declare salaryStatus: SalaryStatus;
 
 
   // ==========================================
-  // READ STATUS
+  // SALARY AMOUNT
   // ==========================================
 
   @Column({
-    type: DataType.BOOLEAN,
-    defaultValue: false,
-  })
-  declare isRead: boolean;
-
-
-  // ==========================================
-  // READ AT
-  // ==========================================
-
-  @Column({
-    type: DataType.DATE,
+    type: DataType.DECIMAL(12, 2),
     allowNull: true,
   })
-  declare readAt: Date | null;
+  declare salaryAmount: number | null;
+
+
+  // ==========================================
+  // NOTES
+  // ==========================================
+
+  @Column({
+    type: DataType.TEXT,
+    allowNull: true,
+  })
+  declare notes: string | null;
 
 }
 
 
-export default Message;
+export default EmployeeWorkDetail;

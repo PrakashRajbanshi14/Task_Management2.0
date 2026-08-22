@@ -10,7 +10,7 @@ import User from "../database/models/userModel";
 
 import conversationService from "../services/conversationService";
 
-import { UserRole } from "../globals/types";
+import { MessageType, UserRole } from "../globals/types";
 
 import { AuthenticatedSocket } from "./types";
 
@@ -208,7 +208,7 @@ export const registerChatSocket = (io: Server) => {
             senderId: user.id,
 
             message: message.trim(),
-
+            messageType: MessageType.text,
             isRead: false,
 
             readAt: null,

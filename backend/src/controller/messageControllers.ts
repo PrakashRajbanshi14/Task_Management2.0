@@ -116,6 +116,7 @@ class MessageController {
                 "id",
                 "fullName",
                 "profileImage",
+                "messageType",
                 "role",
               ],
             },

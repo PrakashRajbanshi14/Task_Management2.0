@@ -10,11 +10,13 @@ import {
   socketAuthMiddleware,
 } from "../middlewares/socketAuthMiddleware";
 
-import {registerNotificationSocket} from "./notificationSocket"
-
 import {
   registerChatSocket,
 } from "./chatSocket";
+
+import {
+  registerCallSocket,
+} from "./callSocket";
 
 
 let io: Server;
@@ -35,12 +37,13 @@ export const initializeSocket = (
         credentials: true,
 
       },
+
     },
   );
 
 
   // ==========================================
-  // Socket Authentication
+  // SOCKET AUTHENTICATION
   // ==========================================
 
   io.use(
@@ -49,10 +52,17 @@ export const initializeSocket = (
 
 
   // ==========================================
-  // Register Chat
+  // CHAT
   // ==========================================
 
   registerChatSocket(io);
+
+
+  // ==========================================
+  // CALLING
+  // ==========================================
+
+  registerCallSocket(io);
 
 
   console.log(
@@ -61,6 +71,7 @@ export const initializeSocket = (
 
 
   return io;
+
 };
 
 
@@ -74,5 +85,7 @@ export const getIO = () => {
 
   }
 
+
   return io;
+
 };

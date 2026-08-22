@@ -58,8 +58,9 @@ export enum SubmissionStatus {
 
 export enum SubmissionFileType {
   video = "video",
-  projectFiles = "projectFiles",
+  projectFile = "projectFile",
 }
+
 
 export enum ReviewStatus {
     approved = "approved",
@@ -73,4 +74,24 @@ export enum NotificationType {
   submissionRedo = "submission_redo",
   projectAssigned = "project_assigned",
   message = "message",
+}
+
+export enum SalaryStatus {
+  Unpaid = "unpaid",
+  Paid = "paid",
+}
+
+export enum MessageType {
+  text = "text",
+  audioCall = "audio_call",
+  videoCall = "video_call",
+  screenShare = "screen_share",
+}
+
+export enum CallStatus {
+  calling = "calling",
+  accepted = "accepted",
+  rejected = "rejected",
+  missed = "missed",
+  ended = "ended",
 }

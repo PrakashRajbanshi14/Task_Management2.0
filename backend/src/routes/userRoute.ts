@@ -44,7 +44,7 @@ router.get(
 router.post("/refresh",errorHandler(UserController.refreshAccessToken))
 
 //logout 
-router.post("/logout", errorHandler(UserController))
+router.post("/logout", errorHandler(UserController.logout))
 
 // get user account details in profile
 router.get("/me", errorHandler(isUserLoggedIn) , errorHandler( UserController.getMyAccountDetails))

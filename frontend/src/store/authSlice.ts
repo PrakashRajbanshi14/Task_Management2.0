@@ -13,6 +13,7 @@ import {
   logout as logoutApi,
   getMyAccount,
 } from "../api/authApi";
+import { getErrorMessage } from "../utils/api";
 
 
 // ==========================================
@@ -24,6 +25,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  profileRequestId: string | null;
 }
 
 
@@ -34,8 +36,23 @@ interface AuthState {
 const initialState: AuthState = {
   user: null,
   isAuthenticated: false,
-  isLoading: false,
+  isLoading: true,
   error: null,
+  profileRequestId: null,
+};
+
+const normalizeUser = (value: unknown): User | null => {
+  if (!value) {
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    const first = value[0] as { User?: User; user?: User } | undefined;
+    return first?.User ?? first?.user ?? null;
+  }
+
+  const maybeWrapped = value as { user?: User; User?: User };
+  return maybeWrapped.user ?? maybeWrapped.User ?? (value as User);
 };
 
 
@@ -60,11 +77,10 @@ export const loginUser = createAsyncThunk<
         );
       }
 
-      return response.data.user;
-    } catch (error: any) {
+      return normalizeUser(response.data) ?? response.data.user;
+    } catch (error: unknown) {
       return rejectWithValue(
-        error.response?.data?.message ||
-          "Unable to login",
+        getErrorMessage(error, "Unable to login"),
       );
     }
   },
@@ -92,11 +108,10 @@ export const registerUser = createAsyncThunk<
         );
       }
 
-      return response.data.user;
-    } catch (error: any) {
+      return normalizeUser(response.data) ?? response.data.user;
+    } catch (error: unknown) {
       return rejectWithValue(
-        error.response?.data?.message ||
-          "Unable to register",
+        getErrorMessage(error, "Unable to register"),
       );
     }
   },
@@ -124,11 +139,16 @@ export const fetchCurrentUser = createAsyncThunk<
         );
       }
 
-      return response.data;
-    } catch (error: any) {
+      const user = normalizeUser(response.data);
+
+      if (!user) {
+        return rejectWithValue("Unable to read account profile");
+      }
+
+      return user;
+    } catch (error: unknown) {
       return rejectWithValue(
-        error.response?.data?.message ||
-          "Unable to fetch account",
+        getErrorMessage(error, "Unable to fetch account"),
       );
     }
   },
@@ -155,10 +175,9 @@ export const logoutUser = createAsyncThunk<
           response.message || "Logout failed",
         );
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       return rejectWithValue(
-        error.response?.data?.message ||
-          "Unable to logout",
+        getErrorMessage(error, "Unable to logout"),
       );
     }
   },
@@ -183,6 +202,7 @@ const authSlice = createSlice({
       state.user = null;
       state.isAuthenticated = false;
       state.error = null;
+      state.profileRequestId = null;
     },
   },
 
@@ -203,6 +223,8 @@ const authSlice = createSlice({
         state.user = action.payload;
         state.isAuthenticated = true;
         state.error = null;
+        // Ignore any session-restore request that began before this login.
+        state.profileRequestId = null;
       })
 
       .addCase(loginUser.rejected, (state, action) => {
@@ -229,6 +251,7 @@ const authSlice = createSlice({
         state.user = action.payload;
         state.isAuthenticated = true;
         state.error = null;
+        state.profileRequestId = null;
       })
 
       .addCase(registerUser.rejected, (state, action) => {
@@ -243,21 +266,32 @@ const authSlice = createSlice({
     // ========================================
 
     builder
-      .addCase(fetchCurrentUser.pending, (state) => {
+      .addCase(fetchCurrentUser.pending, (state, action) => {
         state.isLoading = true;
+        state.profileRequestId = action.meta.requestId;
       })
 
       .addCase(fetchCurrentUser.fulfilled, (state, action) => {
+        if (state.profileRequestId !== action.meta.requestId) {
+          return;
+        }
+
         state.isLoading = false;
         state.user = action.payload;
         state.isAuthenticated = true;
         state.error = null;
+        state.profileRequestId = null;
       })
 
-      .addCase(fetchCurrentUser.rejected, (state) => {
+      .addCase(fetchCurrentUser.rejected, (state, action) => {
+        if (state.profileRequestId !== action.meta.requestId) {
+          return;
+        }
+
         state.isLoading = false;
         state.user = null;
         state.isAuthenticated = false;
+        state.profileRequestId = null;
       });
 
 
@@ -275,6 +309,7 @@ const authSlice = createSlice({
         state.user = null;
         state.isAuthenticated = false;
         state.error = null;
+        state.profileRequestId = null;
       })
 
       .addCase(logoutUser.rejected, (state) => {
@@ -284,6 +319,7 @@ const authSlice = createSlice({
         state.user = null;
         state.isAuthenticated = false;
         state.error = null;
+        state.profileRequestId = null;
       });
   },
 });

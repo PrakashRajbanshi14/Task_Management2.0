@@ -6,8 +6,8 @@ import projectAssignController from "../controller/projectAssignedControllers"
 const router = express.Router()
 
 router.route("/:projectId/employees")
-    .post(isUserLoggedIn, accessToRoles(UserRole.Admin, UserRole.Admin), errorHandler(projectAssignController.assignEmployeesToProject))
-    .get(isUserLoggedIn, accessToRoles(UserRole.Admin, UserRole.Admin), errorHandler(projectAssignController.getEmployeesOfProject))
+    .post(isUserLoggedIn, accessToRoles(UserRole.Admin, UserRole.ProjectManager), errorHandler(projectAssignController.assignEmployeesToProject))
+    .get(isUserLoggedIn, accessToRoles(UserRole.Admin, UserRole.ProjectManager), errorHandler(projectAssignController.getEmployeesOfProject))
     
 router.get("/employees/:employeeId/projects", isUserLoggedIn, errorHandler(projectAssignController.getAllAssignedProjectOfEmployee))
 router.delete("/:projectId/employee/:employeeId", isUserLoggedIn, accessToRoles(UserRole.Admin, UserRole.ProjectManager), errorHandler(projectAssignController.removeEmployeeFromProject))

@@ -1,12 +1,7 @@
-import jwt from "jsonwebtoken";
-
 import { Socket } from "socket.io";
 
 import User from "../database/models/userModel";
-
-interface JwtPayload {
-  userId: string;
-}
+import { verifyAccessToken } from "../utils/generateToken";
 
 export const socketAuthMiddleware = async (
   socket: Socket,
@@ -49,10 +44,7 @@ export const socketAuthMiddleware = async (
     // Verify JWT
     // ==========================================
 
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_ACCESS_SECRET as string,
-    ) as JwtPayload;
+    const decoded = verifyAccessToken(token);
 
     // ==========================================
     // Find user

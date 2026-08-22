@@ -7,13 +7,13 @@ const router = express.Router()
 
 //create shot
 router.route("/projects/:projectId/shots")
-    .post( isUserLoggedIn, accessToRoles(UserRole.Admin || UserRole.ProjectManager), errorHandler(ShotController.addShotToProject))
-    .get( isUserLoggedIn, accessToRoles(UserRole.Admin || UserRole.ProjectManager), errorHandler(ShotController.getAllShotsOfProject))
+    .post( isUserLoggedIn, accessToRoles(UserRole.Admin, UserRole.ProjectManager), errorHandler(ShotController.addShotToProject))
+    .get( isUserLoggedIn, accessToRoles(UserRole.Admin, UserRole.ProjectManager), errorHandler(ShotController.getAllShotsOfProject))
     
 router.route("/:shotId")
     .get(isUserLoggedIn, errorHandler(ShotController.getShotById))
-    .patch(isUserLoggedIn, accessToRoles(UserRole.Admin || UserRole.ProjectManager), errorHandler(ShotController.updateShotDetails))
-    .delete(isUserLoggedIn, accessToRoles(UserRole.Admin || UserRole.ProjectManager), errorHandler(ShotController.deleteShotById))
+    .patch(isUserLoggedIn, accessToRoles(UserRole.Admin, UserRole.ProjectManager), errorHandler(ShotController.updateShotDetails))
+    .delete(isUserLoggedIn, accessToRoles(UserRole.Admin, UserRole.ProjectManager), errorHandler(ShotController.deleteShotById))
 
 export default router
 

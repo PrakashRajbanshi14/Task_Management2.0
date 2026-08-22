@@ -1,14 +1,30 @@
-import { Request, Response } from "express"
+import {
+  NextFunction,
+  Request,
+  Response,
+} from "express";
 
-const errorHandler = (fn:Function) => {
-    return (req:Request, res:Response)=>{
-        fn(req, res).catch((err:Error)=>{
-            res.status(500).json({
-                message : "Internal Error!",
-                errorMessage : err.message
-            })
-        })
-    }
-}
+type AsyncRouteHandler = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => Promise<unknown>;
 
-export default errorHandler
+const errorHandler = (fn: AsyncRouteHandler) => {
+  return (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    Promise.resolve(fn(req, res, next)).catch(
+      (err: Error) => {
+        res.status(500).json({
+          message: "Internal Error!",
+          errorMessage: err.message,
+        });
+      },
+    );
+  };
+};
+
+export default errorHandler;

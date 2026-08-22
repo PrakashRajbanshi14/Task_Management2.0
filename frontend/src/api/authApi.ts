@@ -1,5 +1,6 @@
 
 import api from "./axios";
+import { getBackendUrl } from "../utils/url";
 
 import type {
   AuthResponse,
@@ -8,6 +9,7 @@ import type {
   RegisterRequest,
   RefreshTokenResponse,
   User,
+  UserRole,
 } from "../types/auth";
 
 
@@ -50,9 +52,8 @@ export const login = async (
 // ==========================================
 
 export const googleLogin = (): void => {
-
   window.location.href =
-    `${import.meta.env.VITE_API_URL}/auth/google`;
+    getBackendUrl("/auth/google");
 };
 
 
@@ -104,4 +105,35 @@ export const getMyAccount =
 
     return response.data;
   };
+
+export const addEmployeeDetails = async (
+  userId: string,
+  data: {
+    fullname: string;
+    contact: string;
+    address: string;
+    jobTitle: string;
+  },
+): Promise<AuthResponse<User>> => {
+  const response = await api.post<AuthResponse<User>>(
+    `/auth/add-employee-details/${userId}`,
+    data,
+  );
+
+  return response.data;
+};
+
+export const updateUserRole = async (
+  userId: string,
+  role: Extract<UserRole, "employee" | "projectManager">,
+): Promise<AuthResponse> => {
+  const endpoint =
+    role === "employee"
+      ? `/auth/update-role-to-employee/${userId}`
+      : `/auth/update-role-to-project-manager/${userId}`;
+
+  const response = await api.post<AuthResponse>(endpoint);
+
+  return response.data;
+};
 

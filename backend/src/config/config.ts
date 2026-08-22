@@ -6,7 +6,7 @@ const connectionString = process.env.DB_URI || process.env.DATABASE_URL
 export const envConfig = {
     connectionString,
     port : process.env.PORT,
-    clientUrl : process.env.FRONTEND_URL,
+    clientUrl : process.env.FRONTEND_URL || "http://localhost:5173",
 
     jwtAccessSecretKey : process.env.JWT_ACCESS_SECRET as string,
     jwtRefreshSecretKey : process.env.JWT_REFRESH_SECRET as string,

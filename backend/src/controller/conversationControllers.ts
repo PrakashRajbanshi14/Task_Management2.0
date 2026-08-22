@@ -4,6 +4,7 @@ import { Op } from "sequelize";
 import User from "../database/models/userModel";
 
 import Conversation from "../database/models/conversationModel";
+import Message from "../database/models/messageModel";
 
 import conversationService
   from "../services/conversationService";
@@ -176,12 +177,43 @@ class ConversationController {
             userId,
           );
 
+      const conversationWithUsers =
+        await Conversation.findByPk(
+          conversation.id,
+          {
+            include: [
+              {
+                model: User,
+                as: "userOne",
+                attributes: [
+                  "id",
+                  "fullName",
+                  "email",
+                  "profileImage",
+                  "role",
+                ],
+              },
+              {
+                model: User,
+                as: "userTwo",
+                attributes: [
+                  "id",
+                  "fullName",
+                  "email",
+                  "profileImage",
+                  "role",
+                ],
+              },
+            ],
+          },
+        );
+
 
       return sendResponse(
         res,
         200,
         "Conversation ready",
-        conversation,
+        conversationWithUsers || conversation,
       );
 
 
@@ -245,6 +277,38 @@ static async getMyConversations(
 
         order: [
           ["updatedAt", "DESC"],
+        ],
+
+        include: [
+          {
+            model: User,
+            as: "userOne",
+            attributes: [
+              "id",
+              "fullName",
+              "email",
+              "profileImage",
+              "role",
+            ],
+          },
+          {
+            model: User,
+            as: "userTwo",
+            attributes: [
+              "id",
+              "fullName",
+              "email",
+              "profileImage",
+              "role",
+            ],
+          },
+          {
+            model: Message,
+            as: "messages",
+            separate: true,
+            limit: 1,
+            order: [["createdAt", "DESC"]],
+          },
         ],
 
       });

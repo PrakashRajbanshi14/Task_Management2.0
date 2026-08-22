@@ -34,9 +34,9 @@ const startServer = async () => {
 
     await sequelize.sync({
 
-      force: true,
+      force: false,
 
-      alter: false,
+      alter: process.env.NODE_ENV !== "production",
 
     });
 

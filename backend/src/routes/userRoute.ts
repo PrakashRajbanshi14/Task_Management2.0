@@ -4,7 +4,8 @@ import UserController from "../controller/userControllers"
 import errorHandler from "../utils/errorHandler"
 import { envConfig } from "../config/config"
 import { IExtendedRequest } from "../globals/types"
-import { isUserLoggedIn } from "../middlewares/UserMiddleware"
+import { accessToRoles, isUserLoggedIn } from "../middlewares/UserMiddleware"
+import { UserRole } from "../globals/types"
 const router = express.Router()
 
 //register
@@ -49,14 +50,29 @@ router.post("/logout", errorHandler(UserController.logout))
 // get user account details in profile
 router.get("/me", errorHandler(isUserLoggedIn) , errorHandler( UserController.getMyAccountDetails))
 
+// list users for admin dashboards, assignments, and chat peers
+router.get(
+  "/users",
+  errorHandler(isUserLoggedIn),
+  errorHandler(UserController.getUsers),
+)
+
+// activate/deactivate user by admin
+router.patch(
+  "/users/:userId/status",
+  errorHandler(isUserLoggedIn),
+  accessToRoles(UserRole.Admin),
+  errorHandler(UserController.updateUserStatus),
+)
+
 //add employee details
-router.post("/add-employee-details", errorHandler(UserController.addEmployeeDetails))
+router.post("/add-employee-details/:userId", errorHandler(isUserLoggedIn), errorHandler(UserController.addEmployeeDetails))
 
 //update role to employee by admin
-router.post("/update-role-to-employee", errorHandler(UserController.updateRoleToEmployee))
+router.post("/update-role-to-employee/:userId", errorHandler(isUserLoggedIn), accessToRoles(UserRole.Admin), errorHandler(UserController.updateRoleToEmployee))
 
 //update role to employee by admin
-router.post("/update-role-to-project-manager", errorHandler(UserController.updateRoleToProjectManager))
+router.post("/update-role-to-project-manager/:userId", errorHandler(isUserLoggedIn), accessToRoles(UserRole.Admin), errorHandler(UserController.updateRoleToProjectManager))
 
 export default router
 

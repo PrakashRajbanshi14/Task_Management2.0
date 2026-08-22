@@ -57,8 +57,11 @@ app.use("/api", apiLimiter);
 // CORS
 // =====================================================
 
+const isProduction =
+  process.env.NODE_ENV === "production";
+
 const allowedOrigins =
-  process.env.NODE_ENV === "production"
+  isProduction
     ? [process.env.FRONTEND_URL].filter(Boolean) as string[]
     : [
         process.env.FRONTEND_URL,
@@ -66,9 +69,23 @@ const allowedOrigins =
         "http://127.0.0.1:5173",
       ].filter(Boolean) as string[];
 
+const isLocalDevelopmentOrigin = (origin: string) =>
+  /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
+
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        (!isProduction && isLocalDevelopmentOrigin(origin))
+      ) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error("Origin is not allowed by CORS"));
+    },
     credentials: true,
   }),
 );

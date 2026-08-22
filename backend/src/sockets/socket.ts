@@ -21,6 +21,23 @@ import {
 
 let io: Server;
 
+const isProduction = process.env.NODE_ENV === "production";
+
+const isLocalDevelopmentOrigin = (origin: string) =>
+  /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
+
+const isSocketOriginAllowed = (origin: string | undefined) => {
+  if (!origin) {
+    return true;
+  }
+
+  if (origin === process.env.FRONTEND_URL || origin === process.env.CLIENT_URL) {
+    return true;
+  }
+
+  return !isProduction && isLocalDevelopmentOrigin(origin);
+};
+
 
 export const initializeSocket = (
   httpServer: HttpServer,
@@ -30,9 +47,9 @@ export const initializeSocket = (
     httpServer,
     {
       cors: {
-
-        origin:
-          process.env.CLIENT_URL,
+        origin: (origin, callback) => {
+          callback(null, isSocketOriginAllowed(origin));
+        },
 
         credentials: true,
 

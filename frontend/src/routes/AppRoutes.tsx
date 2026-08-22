@@ -20,8 +20,10 @@ import RoleRoute from "./RoleRoute";
 import AdminLayout from "../layouts/AdminLayout";
 import ProjectManagerLayout from "../layouts/ProjectManagerLayout";
 import EmployeeLayout from "../layouts/EmployeeLayout";
+import UserHomeLayout from "../layouts/UserHomeLayout";
 
 import { UserRole } from "../types/auth";
+import { useAuth } from "../hooks/useAuth";
 
 
 // ==========================================
@@ -51,6 +53,11 @@ const AppRoutes = () => {
 
         <Route
           path="/auth/google/callback"
+          element={<GoogleCallback />}
+        />
+
+        <Route
+          path="/auth/success"
           element={<GoogleCallback />}
         />
 
@@ -140,17 +147,32 @@ const AppRoutes = () => {
 
 
           {/* ================================= */}
+          {/* BASIC USER HOME */}
+          {/* ================================= */}
+
+          <Route
+            element={
+              <RoleRoute
+                allowedRoles={[
+                  UserRole.User,
+                ]}
+              />
+            }
+          >
+            <Route
+              path="/home/*"
+              element={<UserHomeLayout />}
+            />
+          </Route>
+
+
+          {/* ================================= */}
           {/* DEFAULT PROTECTED ROUTE */}
           {/* ================================= */}
 
           <Route
             path="/"
-            element={
-              <Navigate
-                to="/dashboard"
-                replace
-              />
-            }
+            element={<RoleHomeRedirect />}
           />
 
         </Route>
@@ -172,4 +194,26 @@ const AppRoutes = () => {
 
 
 export default AppRoutes;
+
+const RoleHomeRedirect = () => {
+  const { user } = useAuth();
+
+  if (user?.role === UserRole.Admin) {
+    return <Navigate to="/admin" replace />;
+  }
+
+  if (user?.role === UserRole.ProjectManager) {
+    return <Navigate to="/project-manager" replace />;
+  }
+
+  if (user?.role === UserRole.Employee) {
+    return <Navigate to="/employee" replace />;
+  }
+
+  if (user?.role === UserRole.User) {
+    return <Navigate to="/home" replace />;
+  }
+
+  return <Navigate to="/unauthorized" replace />;
+};
 

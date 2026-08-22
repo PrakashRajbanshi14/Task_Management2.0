@@ -8,6 +8,7 @@ import {
 import {
   accessTokenCookieOptions,
   refreshTokenCookieOptions,
+  authCookieClearOptions,
 } from "../config/cookieConfig";
 import { envConfig } from "../config/config";
 import { sendResponse } from "../utils/sendResponse";
@@ -15,6 +16,18 @@ import jwt from "jsonwebtoken";
 import Employee from "../database/models/employeeModel";
 import generateRandomEmployeeCode from "../utils/generateEmployeeCode";
 import bcrypt from "bcryptjs";
+import { Op } from "sequelize";
+
+const setAuthenticationCookies = (
+  res: Response,
+  accessToken: string,
+  refreshToken: string,
+) => {
+  res.clearCookie("accessToken", authCookieClearOptions);
+  res.clearCookie("refreshToken", authCookieClearOptions);
+  res.cookie("accessToken", accessToken, accessTokenCookieOptions);
+  res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
+};
 
 class UserController {
 
@@ -210,9 +223,7 @@ class UserController {
       // Set cookies
       // -----------------------------------------------
 
-      res.cookie("accessToken", accessToken, accessTokenCookieOptions);
-
-      res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
+      setAuthenticationCookies(res, accessToken, refreshToken);
 
       // -----------------------------------------------
       // Response
@@ -270,8 +281,7 @@ class UserController {
       const refreshToken = generateRefreshToken(user.id);
 
       // Set Access Token Cookie
-      res.cookie("accessToken", accessToken, accessTokenCookieOptions);
-      res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
+      setAuthenticationCookies(res, accessToken, refreshToken);
 
       // Redirect to React
       return res.redirect(`${envConfig.clientUrl}/auth/success`);
@@ -306,27 +316,64 @@ class UserController {
         "You are not authorized to update this profile",
       );
     }
-    //update info
-    const employeeCode = generateRandomEmployeeCode();
-    const data = await Employee.update(
-      {
+
+    const existingEmployee = await Employee.findOne({
+      where: {
+        userId: user.id,
+      },
+    });
+
+    if (existingEmployee) {
+      await existingEmployee.update({
         fullname,
         contact,
         address,
         jobTitle,
-        employeeCode,
+      });
+    } else {
+      await Employee.create({
+        fullname,
+        contact,
+        address,
+        jobTitle,
+        employeeCode: generateRandomEmployeeCode(),
+        hasWork: false,
         userId: user.id,
+      });
+    }
+
+    await User.update(
+      {
+        fullName: fullname,
       },
-      { where: { id: user.id } },
+      {
+        where: {
+          id: user.id,
+        },
+      },
     );
 
-    //send updated user data info
     const updatedUser = await User.findByPk(user.id);
+    const employeeData = await Employee.findOne({
+      where: {
+        userId: user.id,
+      },
+    });
+
     return sendResponse(
       res,
       200,
       "Employee Info added successfully",
-      updatedUser,
+      {
+        id: updatedUser?.id,
+        userName: updatedUser?.userName,
+        email: updatedUser?.email,
+        fullName: updatedUser?.fullName,
+        profileImage: updatedUser?.profileImage,
+        role: updatedUser?.role,
+        isActive: updatedUser?.isActive,
+        employee: employeeData,
+      },
     );
   }
 
@@ -357,15 +404,123 @@ class UserController {
     if (!user) {
       return sendResponse(res, 401, "Authentication required", user);
     }
-    const employeeData = await Employee.findAll({
+    const employeeData = await Employee.findOne({
       where: { userId: user.id },
+    });
+    return sendResponse(res, 200, "User retrieved successfully", {
+      id: user.id,
+      userName: user.userName,
+      email: user.email,
+      fullName: user.fullName,
+      profileImage: user.profileImage,
+      role: user.role,
+      isActive: user.isActive,
+      employee: employeeData,
+    });
+  }
+
+  // get users for admin management, chat, and assignment pickers
+  static async getUsers(req: IExtendedRequest, res: Response) {
+    const user = req.user;
+
+    if (!user) {
+      return sendResponse(res, 401, "Authentication required");
+    }
+
+    const requestedRoles = String(req.query.roles || "")
+      .split(",")
+      .map((role) => role.trim())
+      .filter(Boolean) as UserRole[];
+
+    let allowedRoles: UserRole[] = [];
+
+    if (user.role === UserRole.Admin) {
+      allowedRoles = [
+        UserRole.Admin,
+        UserRole.ProjectManager,
+        UserRole.Employee,
+        UserRole.User,
+      ];
+    } else if (user.role === UserRole.ProjectManager) {
+      allowedRoles = [UserRole.Admin, UserRole.Employee];
+    } else if (user.role === UserRole.Employee) {
+      allowedRoles = [UserRole.Admin, UserRole.ProjectManager];
+    } else {
+      return sendResponse(res, 403, "You are not allowed to list users");
+    }
+
+    const roles =
+      requestedRoles.length > 0
+        ? requestedRoles.filter((role) => allowedRoles.includes(role))
+        : allowedRoles;
+
+    const users = await User.findAll({
+      where: {
+        id: {
+          [Op.ne]: user.id,
+        },
+        role: {
+          [Op.in]: roles,
+        },
+      },
+      attributes: {
+        exclude: ["password"],
+      },
       include: [
         {
-          model: User,
+          model: Employee,
+          as: "employee",
+          required: false,
         },
       ],
+      order: [
+        ["role", "ASC"],
+        ["fullName", "ASC"],
+      ],
     });
-    return sendResponse(res, 200, "User retrieved successfully", employeeData);
+
+    return sendResponse(
+      res,
+      200,
+      "Users fetched successfully",
+      users,
+    );
+  }
+
+  // update user active status
+  static async updateUserStatus(req: IExtendedRequest, res: Response) {
+    const user = req.user;
+    const { userId } = req.params;
+    const { isActive } = req.body;
+
+    if (!user) {
+      return sendResponse(res, 401, "Please login to continue!");
+    }
+
+    if (user.role !== UserRole.Admin) {
+      return sendResponse(res, 403, "Only admins can update user status");
+    }
+
+    if (!userId || typeof isActive !== "boolean") {
+      return sendResponse(res, 400, "User ID and isActive are required");
+    }
+
+    await User.update(
+      {
+        isActive,
+      },
+      {
+        where: {
+          id: userId,
+        },
+      },
+    );
+
+    return sendResponse(
+      res,
+      200,
+      isActive ? "User activated successfully" : "User deactivated successfully",
+    );
   }
 
   //update role to project manager
@@ -426,6 +581,7 @@ class UserController {
 
       const newAccessToken = generateAccessToken(user.id);
 
+      res.clearCookie("accessToken", authCookieClearOptions);
       res.cookie("accessToken", newAccessToken, accessTokenCookieOptions);
 
       return res.status(200).json({
@@ -443,8 +599,8 @@ class UserController {
   // LOGOUT
   static async logout(req: Request, res: Response) {
     try {
-      res.clearCookie("accessToken", accessTokenCookieOptions);
-      res.clearCookie("refreshToken", refreshTokenCookieOptions);
+      res.clearCookie("accessToken", authCookieClearOptions);
+      res.clearCookie("refreshToken", authCookieClearOptions);
       return sendResponse(res, 200, "Logout successful");
     } catch (error) {
       console.error("Logout Error:", error);

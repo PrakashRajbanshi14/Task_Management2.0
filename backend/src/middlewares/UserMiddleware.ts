@@ -1,14 +1,67 @@
 
-import jwt from "jsonwebtoken";
 import User from "../database/models/userModel";
 import { NextFunction, Request, Response } from "express";
 import { IExtendedRequest } from "../globals/types";
+import {
+  generateAccessToken,
+  verifyAccessToken,
+} from "../utils/generateToken";
+import jwt from "jsonwebtoken";
+import { envConfig } from "../config/config";
+import {
+  accessTokenCookieOptions,
+  authCookieClearOptions,
+} from "../config/cookieConfig";
 
-interface JwtPayload {
-  userId: string;
-}
 
+type RefreshAuthResult =
+  | "authenticated"
+  | "failed"
+  | "handled";
 
+const refreshRequestAuthentication = async (
+  req: IExtendedRequest,
+  res: Response,
+): Promise<RefreshAuthResult> => {
+  try {
+    const refreshToken = req.cookies?.refreshToken;
+
+    if (!refreshToken) {
+      return "failed";
+    }
+
+    const decoded = jwt.verify(
+      refreshToken,
+      envConfig.jwtRefreshSecretKey as string,
+    ) as {
+      userId: string;
+    };
+
+    const user = await User.findByPk(decoded.userId);
+
+    if (!user) {
+      return "failed";
+    }
+
+    if (!user.isActive) {
+      res.status(403).json({
+        message: "Your account is inactive",
+      });
+      return "handled";
+    }
+
+    const newAccessToken = generateAccessToken(user.id);
+
+    res.clearCookie("accessToken", authCookieClearOptions);
+    res.cookie("accessToken", newAccessToken, accessTokenCookieOptions);
+
+    req.user = user as User;
+
+    return "authenticated";
+  } catch (error) {
+    return "failed";
+  }
+};
 
 /**
  * Middleware to verify if the user is authenticated via Access Token
@@ -22,15 +75,23 @@ export const isUserLoggedIn = async (
     const token = req.cookies?.accessToken;
 
     if (!token) {
+      const refreshResult =
+        await refreshRequestAuthentication(req, res);
+
+      if (refreshResult === "authenticated") {
+        return next();
+      }
+
+      if (refreshResult === "handled") {
+        return;
+      }
+
       return res.status(401).json({
         message: "Authentication required",
       });
     }
 
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_ACCESS_SECRET as string,
-    ) as JwtPayload;
+    const decoded = verifyAccessToken(token);
 
     const user = await User.findByPk(decoded.userId);
 
@@ -51,7 +112,18 @@ export const isUserLoggedIn = async (
 
     next();
   } catch (error) {
-    if (error instanceof jwt.TokenExpiredError) {
+    const refreshResult =
+      await refreshRequestAuthentication(req, res);
+
+    if (refreshResult === "authenticated") {
+      return next();
+    }
+
+    if (refreshResult === "handled") {
+      return;
+    }
+
+    if (error instanceof Error && error.name === "TokenExpiredError") {
       return res.status(401).json({
         message: "Access token expired",
       });

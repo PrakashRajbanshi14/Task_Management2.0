@@ -2,6 +2,10 @@
 import { configureStore } from "@reduxjs/toolkit";
 
 import authReducer from "./authSlice";
+import chatReducer from "./chatSlice";
+import employeeReducer from "./employeeSlice";
+import notificationReducer from "./notificationSlice";
+import projectReducer from "./projectSlice";
 
 
 // ==========================================
@@ -11,6 +15,10 @@ import authReducer from "./authSlice";
 export const store = configureStore({
   reducer: {
     auth: authReducer,
+    chat: chatReducer,
+    employee: employeeReducer,
+    notifications: notificationReducer,
+    projects: projectReducer,
   },
 });
 

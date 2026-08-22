@@ -1,13 +1,17 @@
 
 import axios from "axios";
+import { getApiBaseUrl } from "../utils/url";
 
 
 // ==========================================
 // AXIOS INSTANCE
 // ==========================================
 
+const baseURL =
+  getApiBaseUrl();
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL,
 
   // Important because your backend
   // authentication uses HTTP-only cookies.
@@ -44,8 +48,29 @@ api.interceptors.response.use(
   },
 
   async (error) => {
-    // We will add automatic token-refresh
-    // handling here after authApi.ts is created.
+    const originalRequest = error.config;
+
+    if (error.response?.status === 503) {
+      window.location.assign("/maintenance");
+      return Promise.reject(error);
+    }
+
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !String(originalRequest.url).includes("/auth/refresh") &&
+      !String(originalRequest.url).includes("/auth/login")
+    ) {
+      originalRequest._retry = true;
+
+      try {
+        await api.post("/auth/refresh");
+        return api(originalRequest);
+      } catch (refreshError) {
+        return Promise.reject(refreshError);
+      }
+    }
 
     if (error.response) {
       console.error(

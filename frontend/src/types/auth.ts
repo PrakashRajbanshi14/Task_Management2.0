@@ -2,6 +2,13 @@
 // USER ROLE
 // ==========================================
 
+export const UserRole = {
+  Admin: "admin",
+  ProjectManager: "projectManager",
+  Employee: "employee",
+  User: "user",
+} as const;
+
 export type UserRole =
   | "admin"
   | "projectManager"
@@ -23,6 +30,18 @@ export interface User {
   profileImage: string | null;
   role: UserRole;
   isActive: boolean;
+  employee?: {
+    id: string;
+    userId: string;
+    fullname: string;
+    contact: string;
+    address: string;
+    employeeCode: string;
+    jobTitle: string;
+    hasWork: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+  } | null;
 }
 
 
